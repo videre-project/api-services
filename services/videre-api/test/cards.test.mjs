@@ -728,6 +728,18 @@ test('HTTP /cards/named exact lookup returns one exact-name card', { skip: !apiB
 
   assert.equal(body.data.length, 1);
   assert.equal(body.data[0].name, 'Lightning Bolt');
+  assert.equal(body.data[0].printed_name, null);
+  assert.equal(body.data[0].display_name, 'Lightning Bolt');
+});
+
+test('HTTP /cards/named exact lookup returns printed-name cards by printed title', { skip: !apiBaseUrl }, async () => {
+  const body = await fetchCardRoute(`/cards/named?exact=${encodeURIComponent('Thrum of the Vestige')}`);
+
+  assert.equal(body.data.length, 1);
+  assert.equal(body.data[0].id, 139943);
+  assert.equal(body.data[0].name, 'Lightning Bolt');
+  assert.equal(body.data[0].printed_name, 'Thrum of the Vestige');
+  assert.equal(body.data[0].display_name, 'Thrum of the Vestige');
 });
 
 test('HTTP /cards/named fuzzy lookup returns one ranked card', { skip: !apiBaseUrl }, async () => {

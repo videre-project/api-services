@@ -42,7 +42,7 @@ Quoted values keep spaces together. Explicit query parameters and tagged `q` ter
 /cards/named?fuzzy=lightnng%20bolt
 ```
 
-`exact` uses exact normalized card-name matching. `fuzzy` uses the same ranked card search as `/cards?q=...` and returns the top-ranked result. The response shape matches `/cards/:id`: a wrapper with a one-row `data` array.
+`exact` uses exact normalized card-name matching across canonical names and printed titles. When the query matches a canonical name, ordinary printings rank ahead of printings with a different `printed_name`; when the query matches a printed title, that printed-title row is returned. `fuzzy` uses the same ranked card search as `/cards?q=...` and returns the top-ranked result. The response shape matches `/cards/:id`: a wrapper with a one-row `data` array.
 
 `/cards/autocomplete` returns unique card-name strings in the standard list envelope:
 
@@ -269,6 +269,9 @@ set_release_date
 set_type
 collector_number
 name
+canonical_name
+printed_name
+display_name
 artist
 art_id
 mana_cost
@@ -293,6 +296,8 @@ legalities
 image_url
 in_collection
 ```
+
+The `name` field is the canonical mechanical card name used by existing clients; `canonical_name` is the same value under an explicit field name. The`printed_name` field is present when the MTGO catalog row has a different printed title, such as Universes Within-style promotional treatments. In all cases, the `display_name` field defaults to `printed_name` when present and otherwise to the canonical name, and is the source for the card-name string used in autocomplete and other UI features.
 
 `in_collection` is present only on `POST /cards/search` responses that include a collection.
 
@@ -330,6 +335,9 @@ Example list response, from `/cards?exact=Lightning%20Bolt&set=1E&unique=prints&
       "collector_number": null,
       "set_name": "Limited Edition Alpha",
       "name": "Lightning Bolt",
+      "canonical_name": "Lightning Bolt",
+      "printed_name": null,
+      "display_name": "Lightning Bolt",
       "artist": "Christopher Rush",
       "art_id": 147,
       "mana_cost": "{R}",

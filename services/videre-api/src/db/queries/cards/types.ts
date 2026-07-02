@@ -81,6 +81,7 @@ const cardColumnShape = {
   set_code: field<string | null>(),
   collector_number: field<string | null>(),
   name: field<string | null>(),
+  printed_name: field<string | null>(),
   artist: field<string | null>(),
   art_id: field<number | null>(),
   mana_cost: field<string | null>(),
@@ -101,6 +102,8 @@ const cardColumnShape = {
 } satisfies Partial<Record<TableColumn<'cards'>, unknown>>;
 
 const cardComputedShape = {
+  canonical_name: field<string | null>(),
+  display_name: field<string | null>(),
   set_name: field<string | null>(),
   is_promo: field<boolean>(),
   is_multiface: field<boolean>(),
@@ -122,6 +125,7 @@ const cardFaceShape = {
   face_index: field<number>(),
   source_catalog_id: field<number | null>(),
   name: field<string | null>(),
+  printed_name: field<string | null>(),
   mana_cost: field<string | null>(),
   mana_value: field<number | null>(),
   type_line: field<string | null>(),

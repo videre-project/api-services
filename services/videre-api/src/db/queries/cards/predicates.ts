@@ -61,13 +61,19 @@ const cardFilterDefinitions = [
   ),
   cardFilter(
     paramFilter('name', (value) => exists(attributeSearch(cards.alias, 'a', (alias) => {
-      return lowerContains(attributeColumn(alias, 'name_normalized'), value);
+      return sql`(
+        ${lowerContains(attributeColumn(alias, 'name_normalized'), value)}
+        OR ${lowerContains(attributeColumn(alias, 'printed_name_normalized'), value)}
+      )`;
     }))),
     genericSearchOnly
   ),
   cardFilter(
     paramFilter('exact', (value) => exists(attributeSearch(cards.alias, 'a', (alias) => {
-      return sql`${attributeColumn(alias, 'name_normalized')} = lower(${value})`;
+      return sql`(
+        ${attributeColumn(alias, 'name_normalized')} = lower(${value})
+        OR ${attributeColumn(alias, 'printed_name_normalized')} = lower(${value})
+      )`;
     }))),
     genericSearchOnly
   ),
@@ -176,6 +182,7 @@ const cardFilterDefinitions = [
     paramFilter('q', (value) => sql`(
       ${cards.column('search_vector')} @@ websearch_to_tsquery('english'::regconfig, ${value})
       OR ${cards.column('name_normalized')} % lower(${value})
+      OR ${cards.column('printed_name_normalized')} % lower(${value})
     )`),
     genericSearchOnly
   ),

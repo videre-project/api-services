@@ -73,6 +73,8 @@ export const buildCardsQuery = (params: CardQueryParams): CompiledSql => {
 
 const baseCardSelectFields = {
   ...tableColumnFields(cards, CARD_COLUMN_FIELDS),
+  canonical_name: cards.column('name'),
+  display_name: sql`coalesce(${cards.column('printed_name')}, ${cards.column('name')})`,
   set_name: sets.column('name'),
   is_promo: sql`(coalesce(NULLIF(btrim(${cards.column('promo_label')}), ''), '') <> '')`,
   is_multiface: sql`EXISTS (

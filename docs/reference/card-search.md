@@ -64,21 +64,21 @@ The `!"..."` shorthand performs an exact card-name lookup inside `q`:
 /cards?q=!"Lightning Bolt" year>2020
 ```
 
-This maps to the same exact-name filter as `exact=Lightning Bolt`. It still returns print rows unless `unique=cards` is supplied.
+This maps to the same exact-name filter as `exact=Lightning Bolt` to match canonical card names and printed card titles. Canonical-name matches rank ordinary printings ahead of printings with a different `printed_name`, though printed-title matches still rank the printed-title row first. By default, print rows will always be returned unless `unique=cards` is supplied.
 
 ## Name And Text
 
 | Syntax | Meaning |
 |---|---|
-| `name:bolt` | Card name contains `bolt`. |
+| `name:bolt` | Canonical or printed card name contains `bolt`. |
 | `n:bolt` | Alias for `name`. |
-| `exact:"Lightning Bolt"` | Exact normalized card name. |
+| `exact:"Lightning Bolt"` | Exact normalized canonical or printed card name. |
 | `oracle:"draw a card"` | Oracle text contains the value. |
 | `o:"draw a card"` | Alias for `oracle`. |
 
-Untagged text searches both names and oracle text. `name:` and `oracle:` constrain matching to one field.
+Untagged text searches names and oracle text. Name matching includes canonical names and printed titles. `name:` and `oracle:` constrain matching to one field family.
 
-`exact:` is stricter than `name:`. It matches resolved card names from autocomplete or known decklist entries; partial user input generally belongs in `name:` or untagged text.
+`exact:` is stricter than `name:`. It matches resolved card names from autocomplete or known decklist entries; partial user input generally belongs in `name:` or untagged text. When a canonical name and a printed title both match the query, canonical-name matches sort first. Within canonical-name matches, rows without a separate `printed_name` sort before alternate-title printings.
 
 ## Set, Printing, And Catalog Terms
 
@@ -324,7 +324,7 @@ Supported unique values:
 
 When `order` is omitted, text searches default to `rank`; non-text searches default to `name`. When `unique` is omitted, `/cards` returns print rows.
 
-Sorting happens after filters are applied. For collection-aware searches with `mode=rank`, collection membership is applied before the normal sort so owned cards appear first within the matching result set.
+Sorting happens after filters are applied. Name and rank sorting include the canonical-versus-printed-name preference described above. For collection-aware searches with `mode=rank`, collection membership is applied before the normal sort so owned cards appear first within the matching result set.
 
 ## Negation
 

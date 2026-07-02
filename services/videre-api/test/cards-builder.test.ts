@@ -4,6 +4,7 @@ import test from 'node:test';
 import postgres from 'postgres';
 
 import { buildCardCountQuery } from '../src/db/queries/cards/buildCardCountQuery.ts';
+import { buildCardNameAutocompleteQuery } from '../src/db/queries/cards/buildCardNameAutocompleteQuery.ts';
 import { buildCardQuery } from '../src/db/queries/cards/getCard.ts';
 import {
   buildCardsQuery,
@@ -213,6 +214,46 @@ test('builder-backed count SQL handles representative search shapes', async () =
   }
 });
 
+test('builder-backed card SQL ranks canonical and printed-name matches', async () => {
+  const canonicalPrints = await builderCards({
+    exact: 'Lightning Bolt',
+    unique: 'prints',
+    order: 'name',
+    limit: 5,
+    offset: 0,
+  });
+
+  assert.ok(canonicalPrints.length > 0);
+  assert.equal(canonicalPrints[0].name, 'Lightning Bolt');
+  assert.equal(canonicalPrints[0].printed_name, null);
+
+  const canonicalCards = await builderCards({
+    exact: 'Lightning Bolt',
+    unique: 'cards',
+    order: 'name',
+    limit: 1,
+    offset: 0,
+  });
+
+  assert.equal(canonicalCards.length, 1);
+  assert.equal(canonicalCards[0].name, 'Lightning Bolt');
+  assert.equal(canonicalCards[0].printed_name, null);
+
+  const printedNameMatches = await builderCards({
+    exact: 'Thrum of the Vestige',
+    unique: 'prints',
+    order: 'name',
+    limit: 1,
+    offset: 0,
+  });
+
+  assert.equal(printedNameMatches.length, 1);
+  assert.equal(printedNameMatches[0].id, 139943);
+  assert.equal(printedNameMatches[0].name, 'Lightning Bolt');
+  assert.equal(printedNameMatches[0].printed_name, 'Thrum of the Vestige');
+  assert.equal(printedNameMatches[0].display_name, 'Thrum of the Vestige');
+});
+
 test('builder SQL stays parameterized', () => {
   const query = buildCardsQuery({
     exact: "Dizzying Swoop' OR TRUE --",
@@ -281,7 +322,43 @@ test('card detail SQL keeps nested placeholders and values together', () => {
 
   assert.ok(placeholders.length > 0);
   assert.equal(Math.max(...placeholders), query.values.length);
-  assert.deepEqual(query.values, [605, null, null, 605, 1, 0]);
+  assert.deepEqual(query.values, [605, null, null, null, 605, 1, 0]);
+});
+
+test('builder SQL searches canonical and printed names', () => {
+  const query = buildCardsQuery({
+    exact: 'Thrum of the Vestige',
+    unique: 'prints',
+    limit: 5,
+  });
+
+  assert.match(query.text, /printed_name_normalized/);
+  assert.ok(query.values.includes('Thrum of the Vestige'));
+});
+
+test('builder SQL ranks canonical exact matches before printed-name aliases', () => {
+  const query = buildCardsQuery({
+    exact: 'Lightning Bolt',
+    unique: 'prints',
+    limit: 5,
+  });
+
+  assert.match(query.text, /name_match_priority/);
+  assert.match(query.text, /"c"\."printed_name" IS NULL THEN 0/);
+  assert.match(query.text, /WHEN "c"\."printed_name_normalized" = lower\(\$\d+\) THEN 2/);
+  assert.match(query.text, /ORDER BY name_match_priority, name asc NULLS LAST/);
+});
+
+test('autocomplete SQL includes printed name candidates', () => {
+  const query = buildCardNameAutocompleteQuery({
+    q: 'thrum',
+    limit: 5,
+  });
+
+  assert.match(query.text, /"c"."printed_name"/);
+  assert.match(query.text, /"cf"."printed_name"/);
+  assert.match(query.text, /source_priority/);
+  assert.ok(query.values.includes('thrum'));
 });
 
 async function builderCards(params: CardQueryParams): Promise<Record<string, unknown>[]> {

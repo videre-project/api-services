@@ -34,6 +34,7 @@ export function candidateOrder(
     case 'rank':
       return orderBy([
         'search_rank DESC',
+        'name_match_priority',
         'name NULLS LAST',
         'set_code NULLS LAST',
         'collector_number NULLS LAST',
@@ -42,6 +43,7 @@ export function candidateOrder(
     case 'mana_value':
       return orderBy([
         `mana_value ${direction} NULLS LAST`,
+        'name_match_priority',
         'name NULLS LAST',
         'set_code NULLS LAST',
         'collector_number NULLS LAST',
@@ -52,6 +54,7 @@ export function candidateOrder(
         `release_date ${direction} NULLS LAST`,
         'set_code NULLS LAST',
         'collector_number NULLS LAST',
+        'name_match_priority',
         'name NULLS LAST',
         'id',
       ]);
@@ -59,11 +62,13 @@ export function candidateOrder(
       return orderBy([
         `set_code ${direction} NULLS LAST`,
         'collector_number NULLS LAST',
+        'name_match_priority',
         'name NULLS LAST',
         'id',
       ]);
     default:
       return orderBy([
+        'name_match_priority',
         `name ${direction} NULLS LAST`,
         'set_code NULLS LAST',
         'collector_number NULLS LAST',
@@ -77,6 +82,7 @@ export function cardOrder(orderMode: CardOrderMode, direction: CardOrderDirectio
     case 'rank':
       return orderBy([
         'cc.search_rank DESC',
+        'cc.name_match_priority',
         'cc.name NULLS LAST',
         'cc.set_code NULLS LAST',
         'cc.collector_number NULLS LAST',
@@ -85,6 +91,7 @@ export function cardOrder(orderMode: CardOrderMode, direction: CardOrderDirectio
     case 'mana_value':
       return orderBy([
         `cc.mana_value ${direction} NULLS LAST`,
+        'cc.name_match_priority',
         'cc.name NULLS LAST',
         'cc.set_code NULLS LAST',
         'cc.collector_number NULLS LAST',
@@ -95,6 +102,7 @@ export function cardOrder(orderMode: CardOrderMode, direction: CardOrderDirectio
         `cc.release_date ${direction} NULLS LAST`,
         'cc.set_code NULLS LAST',
         'cc.collector_number NULLS LAST',
+        'cc.name_match_priority',
         'cc.name NULLS LAST',
         'c.id',
       ]);
@@ -102,11 +110,13 @@ export function cardOrder(orderMode: CardOrderMode, direction: CardOrderDirectio
       return orderBy([
         `cc.set_code ${direction} NULLS LAST`,
         'cc.collector_number NULLS LAST',
+        'cc.name_match_priority',
         'cc.name NULLS LAST',
         'c.id',
       ]);
     default:
       return orderBy([
+        'cc.name_match_priority',
         `cc.name ${direction} NULLS LAST`,
         'cc.set_code NULLS LAST',
         'cc.collector_number NULLS LAST',

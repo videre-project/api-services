@@ -68,6 +68,7 @@ function genericCandidateQuery(options: CardCandidateQueryOptions): SqlFragment 
       ORDER BY
         ${cards.column('oracle_id')},
         ${collectionUniqueRepresentativeOrder(params)}
+        name_match_priority,
         ${sets.column('release_date')} DESC NULLS LAST,
         ${cards.column('id')} DESC
     `
@@ -89,8 +90,12 @@ function genericCandidateQuery(options: CardCandidateQueryOptions): SqlFragment 
           ${collectionSelectExpression(params)} AS in_collection,
           CASE
             WHEN ${params.q ?? null}::text IS NULL THEN 0::real
-            ELSE similarity(${cards.column('name_normalized')}, lower(${params.q ?? null}::text))
+            ELSE greatest(
+              similarity(${cards.column('name_normalized')}, lower(${params.q ?? null}::text)),
+              similarity(${cards.column('printed_name_normalized')}, lower(${params.q ?? null}::text))
+            )
           END AS search_rank,
+          ${nameMatchPriority(params)} AS name_match_priority,
           ${cards.column('name')},
           ${cards.column('set_code')},
           ${cards.column('collector_number')},
@@ -125,6 +130,7 @@ function fastUniqueNameCandidateQuery(options: CardCandidateQueryOptions): SqlFr
         ${cards.column('oracle_id')},
         ${collectionSelectExpression(params)} AS in_collection,
         0::real AS search_rank,
+        0::int AS name_match_priority,
         ${cards.column('name')},
         ${cards.column('set_code')},
         ${cards.column('collector_number')},
@@ -163,4 +169,58 @@ function fastUniqueNameCandidateQuery(options: CardCandidateQueryOptions): SqlFr
       OFFSET ${offset}::int
     )
   `;
+}
+
+function nameMatchPriority(params: CardQueryParams): SqlFragment {
+  if (typeof params.exact === 'string' && params.exact.trim() !== '') {
+    return exactNameMatchPriority(params.exact);
+  }
+
+  if (typeof params.name === 'string' && params.name.trim() !== '') {
+    return partialNameMatchPriority(params.name);
+  }
+
+  if (typeof params.q === 'string' && params.q.trim() !== '') {
+    return fuzzyNameMatchPriority(params.q);
+  }
+
+  return raw('0::int');
+}
+
+function exactNameMatchPriority(value: string): SqlFragment {
+  return sql`CASE
+    WHEN ${cards.column('name_normalized')} = lower(${value})
+      AND ${cards.column('printed_name')} IS NULL THEN 0
+    WHEN ${cards.column('name_normalized')} = lower(${value}) THEN 1
+    WHEN ${cards.column('printed_name_normalized')} = lower(${value}) THEN 2
+    ELSE 3
+  END`;
+}
+
+function partialNameMatchPriority(value: string): SqlFragment {
+  return sql`CASE
+    WHEN ${cards.column('name_normalized')} LIKE '%' || lower(${value}) || '%'
+      AND ${cards.column('printed_name')} IS NULL THEN 0
+    WHEN ${cards.column('name_normalized')} LIKE '%' || lower(${value}) || '%' THEN 1
+    WHEN ${cards.column('printed_name_normalized')} LIKE '%' || lower(${value}) || '%' THEN 2
+    ELSE 3
+  END`;
+}
+
+function fuzzyNameMatchPriority(value: string): SqlFragment {
+  return sql`CASE
+    WHEN ${cards.column('name_normalized')} = lower(${value})
+      AND ${cards.column('printed_name')} IS NULL THEN 0
+    WHEN ${cards.column('name_normalized')} = lower(${value}) THEN 1
+    WHEN ${cards.column('printed_name_normalized')} = lower(${value}) THEN 2
+    WHEN ${cards.column('name_normalized')} LIKE lower(${value}) || '%'
+      AND ${cards.column('printed_name')} IS NULL THEN 3
+    WHEN ${cards.column('name_normalized')} LIKE lower(${value}) || '%' THEN 4
+    WHEN ${cards.column('printed_name_normalized')} LIKE lower(${value}) || '%' THEN 5
+    WHEN ${cards.column('name_normalized')} % lower(${value})
+      AND ${cards.column('printed_name')} IS NULL THEN 6
+    WHEN ${cards.column('name_normalized')} % lower(${value}) THEN 7
+    WHEN ${cards.column('printed_name_normalized')} % lower(${value}) THEN 8
+    ELSE 9
+  END`;
 }

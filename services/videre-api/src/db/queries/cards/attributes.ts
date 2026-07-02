@@ -22,6 +22,7 @@ const cardFaces = table('card_faces', 'cf');
 
 const cardSearchAttributeColumns = [
   'name_normalized',
+  'printed_name_normalized',
   'search_vector',
   'type_line',
   'oracle_text',
