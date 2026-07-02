@@ -55,12 +55,11 @@ export default Router({ base: '/sets' })
     withValidation(detailArgs),
     withPostgres,
     async (req, { sql, params }) => {
-      const query = getSets(sql, { ...params, limit: 1 });
-
-      const response = await Execute(sql`
-        SELECT * FROM (${query})
-        LIMIT 1
-      `, params);
+      const response = await Execute(getSets(sql, {
+        ...params,
+        limit: 1,
+        offset: 0,
+      }), params);
 
       if (response instanceof Response) {
         return response;

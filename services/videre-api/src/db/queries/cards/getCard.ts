@@ -5,37 +5,47 @@
 
 import {
   compile,
-  jsonBuildObjectFromColumns
+  jsonBuildObjectFromColumns,
+  sql as sqlFragment,
+  type CompiledSql
 } from '@videre/sql-builder';
 
 import type { PendingSql, Sql } from '@/db/postgres';
 
-import { getCardFaces, getCards } from './getCards.ts';
+import { buildCardFacesQuery } from './buildCardFacesQuery.ts';
+import { buildCardsQuery } from './buildCardsQuery.ts';
 import { CARD_FACE_FIELDS, type ICardDetail } from './types.ts';
 
 const cardFaceJsonObject = compile(jsonBuildObjectFromColumns('f', CARD_FACE_FIELDS));
 
 
-export const getCard = (
-  sql: Sql,
+export const buildCardQuery = (
   params: { [key: string]: any }
-): PendingSql<ICardDetail[]> => {
-  const card = getCards(sql, params);
-  const faces = getCardFaces(sql, params);
+): CompiledSql => {
+  const card = buildCardsQuery(params);
+  const faces = buildCardFacesQuery(params);
 
-  return sql`
+  return compile(sqlFragment`
     SELECT
       c.*,
       COALESCE((
         SELECT json_agg(
-          -- cardFaceJsonObject is compiled from the static CARD_FACE_FIELDS list.
-          ${sql.unsafe(cardFaceJsonObject.text, [...cardFaceJsonObject.values])}
+          ${cardFaceJsonObject}
           ORDER BY f.face_index
         )
         FROM (${faces}) f
       ), '[]'::json) AS faces
     FROM (${card}) c
-  `;
-}
+  `);
+};
+
+export const getCard = (
+  sql: Sql,
+  params: { [key: string]: any }
+): PendingSql<ICardDetail[]> => {
+  const query = buildCardQuery(params);
+
+  return sql.unsafe(query.text, [...query.values]);
+};
 
 export default getCard;

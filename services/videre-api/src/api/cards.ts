@@ -151,17 +151,12 @@ export default Router({ base: '/cards' })
         return Error(400, 'No results found.');
       }
 
-      const query = getCard(sql, {
+      const response = await Execute(getCard(sql, {
         id: card.id,
         limit: 1,
         offset: 0,
         unique: 'prints',
-      });
-
-      const response = await Execute(sql`
-        SELECT * FROM (${query})
-        LIMIT 1
-      `, { ...params, id: card.id });
+      }), { ...params, id: card.id });
 
       return 'data' in response
         ? { ...response, data: normalizeCards(response.data) }
@@ -208,17 +203,12 @@ export default Router({ base: '/cards' })
         return Error(400, 'No results found.');
       }
 
-      const query = getCard(sql, {
+      const response = await Execute(getCard(sql, {
         id: card.id,
         limit: 1,
         offset: 0,
         unique: 'prints',
-      });
-
-      const response = await Execute(sql`
-        SELECT * FROM (${query})
-        LIMIT 1
-      `, { ...params, id: card.id });
+      }), { ...params, id: card.id });
 
       return 'data' in response
         ? { ...response, data: normalizeCards(response.data) }
@@ -229,11 +219,12 @@ export default Router({ base: '/cards' })
     withValidation(detailArgs),
     withPostgres,
     async (req, { sql, params }) => {
-      const query = getCard(sql, params);
-      const response = await Execute(sql`
-        SELECT * FROM (${query})
-        LIMIT 1
-      `, params);
+      const response = await Execute(getCard(sql, {
+        ...params,
+        limit: 1,
+        offset: 0,
+        unique: 'prints',
+      }), params);
 
       return 'data' in response
         ? { ...response, data: normalizeCards(response.data) }

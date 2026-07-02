@@ -60,11 +60,10 @@ export default Router({ base: '/products' })
     withValidation(detailArgs),
     withPostgres,
     async (req, { sql, params }) => {
-      const query = getProducts(sql, { ...params, limit: 1 });
-
-      return await Execute(sql`
-        SELECT * FROM (${query})
-        LIMIT 1
-      `, params);
+      return await Execute(getProducts(sql, {
+        ...params,
+        limit: 1,
+        offset: 0,
+      }), params);
     }
   );

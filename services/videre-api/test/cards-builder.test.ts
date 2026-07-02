@@ -4,6 +4,7 @@ import test from 'node:test';
 import postgres from 'postgres';
 
 import { buildCardCountQuery } from '../src/db/queries/cards/buildCardCountQuery.ts';
+import { buildCardQuery } from '../src/db/queries/cards/getCard.ts';
 import {
   buildCardsQuery,
   type CardQueryParams
@@ -266,6 +267,21 @@ test('builder count SQL keeps collection IDs parameterized', () => {
   assert.match(query.text, /jsonb_array_elements_text\(\(\$\d+\)::text::jsonb\)/);
   assert.doesNotMatch(query.text, /1195/);
   assert.ok(query.values.includes('[605,1195]'));
+});
+
+test('card detail SQL keeps nested placeholders and values together', () => {
+  const query = buildCardQuery({
+    id: 605,
+    unique: 'prints',
+    limit: 1,
+    offset: 0,
+  });
+
+  const placeholders = Array.from(query.text.matchAll(/\$(\d+)/g), (match) => Number(match[1]));
+
+  assert.ok(placeholders.length > 0);
+  assert.equal(Math.max(...placeholders), query.values.length);
+  assert.deepEqual(query.values, [605, null, null, 605, 1, 0]);
 });
 
 async function builderCards(params: CardQueryParams): Promise<Record<string, unknown>[]> {
