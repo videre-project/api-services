@@ -8,7 +8,7 @@ The MTGO manifest API reports the current MTGO ClickOnce deployment metadata use
 GET /mtgo/manifest
 ```
 
-The endpoint fetches Daybreak's live MTGO deployment and application manifests, then returns a normalized JSON document.
+The endpoint fetches Daybreak's live MTGO deployment and application manifests, then returns a normalized JSON document directly. Database-backed API routes use the shared `parameters`/`meta`/`data` response envelope; the manifest route returns the manifest document itself.
 
 ## Response Shape
 
@@ -22,6 +22,8 @@ public_key
 dependencies
 ```
 
+`dependencies` is the normalized dependency list from the MTGO application manifest. The array can be long because it includes MTGO client assemblies and third-party assemblies distributed with the client.
+
 Each dependency includes:
 
 ```text
@@ -33,31 +35,61 @@ public_key
 hash
 ```
 
-`hash` contains the manifest digest algorithm and value when MTGO publishes one for that dependency.
+`public_key` is present on the top-level manifest and on dependencies that publish one. `hash` contains the manifest digest algorithm and value when MTGO publishes one for that dependency.
 
-Example response:
+Example response, abbreviated from live manifest output:
 
-```json
+```jsonc
 {
-  "version": "3.4.157.4679",
-  "codebase": "3.4.157.4679.20260623090043",
-  "date": "2026-06-23T09:00:43Z",
-  "public_key": "3082010a...",
+  "version": "3.4.157.4683",
+  "codebase": "3.4.157.4683.20260701100032",
+  "date": "2026-07-01T10:00:32",
+  "public_key": "e0b489d8605198df",
   "dependencies": [
     {
-      "name": "Card.dll",
-      "version": "3.4.157.4679",
-      "file": "Card.dll.deploy",
-      "size": 12345678,
-      "public_key": "3082010a...",
+      "name": "AdminScene",
+      "file": "AdminScene.dll",
+      "version": "3.4.157.4683",
+      "size": 36864,
       "hash": {
-        "algorithm": "sha256",
-        "value": "..."
+        "algorithm": "sha1",
+        "value": "90a5596a74fb25569945bc80f62d5dc97f4d1519"
       }
-    }
+    },
+    {
+      "name": "Ben.Demystifier",
+      "file": "Ben.Demystifier.dll",
+      "version": "0.4.0.0",
+      "size": 72704,
+      "public_key": "a6d206e05440431a",
+      "hash": {
+        "algorithm": "sha1",
+        "value": "19a9d08812c03c2c3835c21c9e95c865a0594bd"
+      }
+    },
+    {
+      "name": "Card",
+      "file": "Card.dll",
+      "version": "3.4.157.4683",
+      "size": 232741888,
+      "hash": {
+        "algorithm": "sha1",
+        "value": "5c93b693cbc4e82efccd5fe05e1ca905717587e"
+      }
+    },
+    {
+      "name": "CardManager",
+      "file": "CardManager.dll",
+      "version": "3.4.157.4683",
+      "size": 685056,
+      "hash": {
+        "algorithm": "sha1",
+        "value": "18f2e489f5322a817bd2ce509ffaa3ded7a0db47"
+      }
+    },
+    // ... additional dependencies omitted
   ]
 }
 ```
 
-The manifest endpoint reflects Daybreak's live deployment metadata, so values
-change whenever MTGO publishes a new client build.
+The manifest endpoint reflects Daybreak's live deployment metadata, so values change whenever MTGO publishes a new client build.

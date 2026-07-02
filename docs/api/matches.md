@@ -2,37 +2,36 @@
 
 For shared response, pagination, caching, and rate-limit behavior, see [API Overview](index.md).
 
-The matches API returns raw round-by-round match records for MTGO events,
-including game-level results when the source data includes them. It is the
-lowest-level match feed exposed by the public API.
+The matches API returns round-by-round match records for imported MTGO events. Each row is from one player's side of a pairing and includes match result, game-level results when available, and joined deck/archetype fields for both players when available.
 
 ```text
 GET /matches/:format?
 ```
 
-`format` can be supplied as the path segment or as a query parameter. If both
-are present, the path value wins. The endpoint accepts the same event filters as
-`/events`, plus optional `player` and `archetype` filters.
+The endpoint returns the match rows selected by `format`, `event_id`, `min_date`, and `max_date`. Each row is oriented around the `player` field, so `result`, `record`, and `games` are from that player's perspective.
 
 ## Filters
 
 ```text
 /matches/modern
-/matches/modern?event_id=12345
+/matches/modern?event_id=12845711
 /matches/pioneer?min_date=2026-06-01&max_date=2026-06-26
 /matches/modern?player=Manatraders&archetype=Rakdos
 ```
 
-Supported query parameters are `format`, `event_id`, `min_date`, `max_date`,
-`player`, `archetype`, `limit`, and `offset`.
+Supported query parameters are `format`, `event_id`, `min_date`, `max_date`, `player`, `archetype`, `limit`, and `offset`.
 
-`player` matches either side of the pairing. `archetype` matches either side's
-classification. Both are case-insensitive contains filters. Use `offset` with
-`limit` to page through large events.
+`format` can be supplied as the path segment or as a query parameter. If both are present, the path value wins.
 
-Responses use the standard list envelope with `meta.limit`, `meta.offset`,
-`meta.has_more`, and `meta.next_offset`. For full-event exports, keep requesting
-the same route with `offset=meta.next_offset` until `has_more` is false.
+`event_id` selects one imported event and takes precedence over date filters.
+
+`min_date` and `max_date` select events by event date. If no `event_id` or date range is supplied, the API uses the default recent event window described in [API Overview](index.md).
+
+`player` matches either side of the pairing. `archetype` matches either side's deck name or archetype label. Both are case-insensitive contains filters.
+
+`offset` and `limit` page through large event windows.
+
+Responses use the standard list envelope with `meta.limit`, `meta.offset`, `meta.has_more`, and `meta.next_offset`. For full-event exports, keep requesting the same route with `offset=meta.next_offset` until `has_more` is false.
 
 ## Response Shape
 
@@ -62,20 +61,24 @@ opponent_archetype
 opponent_archetype_id
 ```
 
-`result` is from `player`'s perspective. `games` is an ordered array of
-per-game results when available. Bye rows can have missing opponent deck fields.
+`result` is from `player`'s perspective. `games` is an ordered array of per-game tuple strings in the form `(game_id,result)` when game-level source data is available. Bye rows and rows where a player decklist cannot be joined can have missing deck and archetype fields.
 
-Example response:
+Example response, abbreviated from real API output:
 
 ```json
 {
   "object": "list",
   "parameters": {
-    "format": "modern",
-    "event_id": 12345,
+    "format": "Modern",
+    "event_id": 12845711,
+    "min_date": "2026-05-31T00:00:00.000Z",
+    "max_date": "2026-07-01T00:00:00.000Z",
     "limit": 1
   },
   "meta": {
+    "database": "api@worker-db.videreproject.com/mtgo",
+    "backend": "postgres",
+    "exec_ms": 124,
     "row_count": 1,
     "total": null,
     "limit": 1,
@@ -85,17 +88,30 @@ Example response:
   },
   "data": [
     {
-      "id": 98765,
-      "event_id": 12345,
-      "round": 3,
-      "player": "ExamplePlayer",
-      "opponent": "OpponentPlayer",
-      "record": "2-1",
-      "result": "Win",
+      "id": 288120866,
+      "event_id": 12845711,
+      "round": 1,
+      "player": "albertoSD",
+      "opponent": "GyaraMos6812",
+      "record": "0-2-0",
+      "result": "loss",
       "isbye": false,
-      "games": [],
-      "player_archetype": "Izzet Murktide",
-      "opponent_archetype": "Rakdos Midrange"
+      "games": [
+        "(954950666,loss)",
+        "(954951628,loss)"
+      ],
+      "date": "2026-06-30T00:00:00.000Z",
+      "format": "Modern",
+      "event_name": "Modern Challenge 64",
+      "event_type": "Challenge",
+      "player_deck_id": null,
+      "player_deck_name": null,
+      "player_archetype": null,
+      "player_archetype_id": null,
+      "opponent_deck_id": 58586529,
+      "opponent_deck_name": "Izzet Prowess",
+      "opponent_archetype": "Izzet Prowess",
+      "opponent_archetype_id": 18619
     }
   ]
 }

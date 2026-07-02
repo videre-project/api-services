@@ -2,27 +2,30 @@
 
 For shared response, pagination, caching, and rate-limit behavior, see [API Overview](index.md).
 
-The sets API lists MTGO set records imported from the card catalog. It is meant
-for browsing releases, building set filters, and checking how many cards,
-tokens, and products are represented for a set.
+The sets API lists MTGO set records imported from the card catalog. Rows provide set codes, release dates, MTGO set-type values, and catalog counts for cards, tokens, and products.
 
 ```text
 GET /sets
 GET /sets/:code
 ```
 
-`/sets` returns a paginated list. `/sets/:code` returns one set by MTGO set code.
+`/sets` returns a paginated list. `/sets/:code` returns one set by MTGO set code, using the same row shape as `/sets`.
 
 ## Filters
 
 ```text
 /sets?q=strixhaven
+/sets?q=code:STX
 /sets?code=SOS
 /sets?name=Modern Horizons
 /sets?type=LargeExpansionSet
 ```
 
-The `q` parameter searches set code and set name. Explicit parameters win when both are supplied.
+Supported query parameters are `q`, `code`, `name`, `type`, `order`, `dir`, `limit`, and `offset`.
+
+The `q` parameter accepts plain text and tagged terms. Untagged text searches set code and set name. `code:`, `set:`, `e:`, and `edition:` map to the `code` filter. `name:` maps to the `name` filter, and `type:` or `set_type:` maps to the `type` filter. Explicit query parameters win when both are supplied.
+
+`code` is an exact case-insensitive MTGO set-code filter. `name` is a case-insensitive contains filter on the set name. `type` is an exact case-insensitive filter on the MTGO `set_type` value.
 
 ## Sorting And Pagination
 
@@ -31,7 +34,7 @@ The `q` parameter searches set code and set name. Explicit parameters win when b
 /sets?order=name&dir=asc
 ```
 
-Supported sort keys are `released`, `name`, `code`, and `type`. The response includes `total`, `has_more`, and `next_offset` metadata.
+Supported sort keys are `released`, `name`, `code`, and `type`. `released` sorts by `release_date` and defaults to descending order. The other sort keys default to ascending order. The response includes exact `total`, `has_more`, and `next_offset` metadata.
 
 ## Response Shape
 
@@ -48,18 +51,23 @@ token_count
 product_count
 ```
 
-Set types are MTGO-derived. They are useful for grouping releases, but they are not intended to be a full paper Magic product taxonomy.
+`release_date` is the imported MTGO release date as an ISO timestamp. `age` is the numeric MTGO set age value imported with the set metadata. `set_type` is an MTGO-derived grouping value; paper Magic product taxonomy can differ.
 
-Example response:
+`card_count` counts non-token card catalog rows in the set. `token_count` counts token card rows. `product_count` counts non-card catalog products whose `set_code` matches the set.
+
+Example response, from `/sets?code=STX&limit=1`:
 
 ```json
 {
   "object": "list",
   "parameters": {
-    "q": "strixhaven",
+    "code": "STX",
     "limit": 1
   },
   "meta": {
+    "database": "api@worker-db.videreproject.com/mtgo",
+    "backend": "postgres",
+    "exec_ms": 150,
     "row_count": 1,
     "total": 1,
     "limit": 1,
@@ -71,15 +79,13 @@ Example response:
     {
       "code": "STX",
       "name": "Strixhaven: School of Mages",
-      "release_date": "2021-04-15",
-      "age": 1900,
+      "release_date": "2021-04-23T00:00:00.000Z",
+      "age": 319,
       "set_type": "LargeExpansionSet",
-      "card_count": 382,
-      "token_count": 21,
-      "product_count": 12
+      "card_count": 285,
+      "token_count": 0,
+      "product_count": 11
     }
   ]
 }
 ```
-
-`age` is the number of days from the set release date to the query date.

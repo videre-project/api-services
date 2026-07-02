@@ -8,20 +8,11 @@ POST /cards/search?q=...
 GET /cards/random?q=...
 ```
 
-For route shapes, response fields, collection search, and examples, see
-[Cards API](../api/cards.md). For shared response, pagination, caching, and
-rate-limit behavior, see [API Overview](../api/index.md) and
-[Rate Limits](rate-limits.md).
+For route shapes, response fields, collection search, and examples, see [Cards API](../api/cards.md). For shared response, pagination, caching, and rate-limit behavior, see [API Overview](../api/index.md) and [Rate Limits](rate-limits.md).
 
-The syntax is inspired by Scryfall search, but it is not a full clone. Videre's
-card catalog is MTGO-focused, so the supported terms are the ones backed by
-MTGO catalog fields, generated legality data, and Videre's card search indexes.
+The syntax is an MTGO-focused subset inspired by Scryfall search. Supported terms are backed by MTGO catalog fields, generated legality data, and Videre's card search indexes.
 
-The simplest way to think about `q` is that it is a compact form for building
-the same filters exposed as query parameters. Use plain words for human search.
-Use tagged terms when a word must apply to a specific field. Use comparison
-operators when the field needs ordering, such as mana value, release date, or
-rarity.
+`q` is a compact form for building the same filters exposed as query parameters. Plain words search names and oracle text. Tagged terms constrain a word to a specific field. Comparison operators apply to ordered fields such as mana value, release date, and rarity.
 
 ## How Queries Are Parsed
 
@@ -33,31 +24,22 @@ name:"Lightning Bolt"
 artist:"Christopher Rush"
 ```
 
-Tokens that are not recognized as operators or tagged terms remain as plain
-text search. Plain text searches card names and oracle text using the database
-search index:
+Tokens that are not recognized as operators or tagged terms remain as plain text search. Plain text searches card names and oracle text using the database search index:
 
 ```text
 /cards?q=lightning bolt
 /cards?q=draw a card
 ```
 
-Most tagged terms fill one API filter. If the same filter is supplied both as an
-explicit query parameter and inside `q`, the explicit query parameter wins. If a
-singleton filter appears twice inside `q`, the first recognized value wins.
-Type terms are the main exception: repeated `t:` terms are combined.
+Most tagged terms fill one API filter. If the same filter is supplied both as an explicit query parameter and inside `q`, the explicit query parameter wins. If a singleton filter appears twice inside `q`, the first recognized value wins. Type terms are the main exception: repeated `t:` terms are combined.
 
-The `q` parameter accepts letters, numbers, punctuation, symbols, and
-whitespace. Control characters are rejected before parsing.
+The `q` parameter accepts letters, numbers, punctuation, symbols, and whitespace. Control characters are rejected before parsing.
 
-This parser does not implement full boolean grouping. There is no parenthesized
-`or` syntax, and negation is deliberately narrow. When a query needs structured
-behavior that is easier to express in code, prefer explicit query parameters
-over trying to encode an entire query language into one string.
+The parser supports plain text, tagged terms, comparisons, and narrow negation. Full boolean grouping and parenthesized `or` syntax are outside the supported `q` grammar. Explicit query parameters cover structured behavior beyond `q`.
 
 ## Common Recipes
 
-These examples show the patterns most clients should start with:
+Common examples:
 
 ```text
 /cards?q=lightning bolt
@@ -69,26 +51,20 @@ These examples show the patterns most clients should start with:
 /cards?q=is:token name:clue
 ```
 
-Use `unique=prints` when the UI is about MTGO printings, images, set releases,
-or collection ownership. Use `unique=cards` when the UI is about oracle-level
-card discovery and should collapse reprints.
+`unique=prints` returns MTGO print rows for printing, image, set, and collection views. `unique=cards` collapses reprints to one representative per oracle card.
 
-For search boxes, send the user's text as plain `q` until the UI deliberately
-exposes advanced filters. Plain text ranking is usually a better default than
-forcing user input into `name:` because untagged text can also match oracle
-text.
+Search boxes can send the user's text as plain `q`. Untagged text can match both card names and oracle text, while `name:` limits matching to card names.
 
 ## Exact Name Shorthand
 
-Use `!"..."` for an exact card-name lookup inside `q`:
+The `!"..."` shorthand performs an exact card-name lookup inside `q`:
 
 ```text
 /cards?q=!"Lightning Bolt"
 /cards?q=!"Lightning Bolt" year>2020
 ```
 
-This maps to the same exact-name filter as `exact=Lightning Bolt`. It still
-returns print rows unless `unique=cards` is supplied.
+This maps to the same exact-name filter as `exact=Lightning Bolt`. It still returns print rows unless `unique=cards` is supplied.
 
 ## Name And Text
 
@@ -100,12 +76,9 @@ returns print rows unless `unique=cards` is supplied.
 | `oracle:"draw a card"` | Oracle text contains the value. |
 | `o:"draw a card"` | Alias for `oracle`. |
 
-Untagged text searches both names and oracle text. Use `name:` or `oracle:` when
-the field matters.
+Untagged text searches both names and oracle text. `name:` and `oracle:` constrain matching to one field.
 
-`exact:` is stricter than `name:`. It is appropriate when a client has already
-resolved a card name from autocomplete or from a known decklist entry. It is not
-as forgiving for partial user input.
+`exact:` is stricter than `name:`. It matches resolved card names from autocomplete or known decklist entries; partial user input generally belongs in `name:` or untagged text.
 
 ## Set, Printing, And Catalog Terms
 
@@ -128,17 +101,13 @@ as forgiving for partial user input.
 | `promo:prerelease` | Promo label contains `prerelease`. |
 | `promo_label:prerelease` | Alias for `promo`. |
 
-Set codes are compared case-insensitively. Collector numbers are exact string
-matches, which matters for MTGO catalog values that contain letters or suffixes.
+Set codes are compared case-insensitively. Collector numbers are exact string matches, which matters for MTGO catalog values that contain letters or suffixes.
 
-Catalog IDs identify MTGO catalog rows, not oracle cards. They are the right
-identifier for card images, collection matching, and exact printing lookup.
-Oracle-level grouping is controlled separately with `unique=cards`.
+Catalog IDs identify MTGO catalog rows, not oracle cards. They are the right identifier for card images, collection matching, and exact printing lookup. Oracle-level grouping is controlled separately with `unique=cards`.
 
 ## Colors
 
-Color search uses MTGO's computed color masks. Color values can use `WUBRG`,
-`C`, or color names.
+Color search uses MTGO's computed color masks. Color values can use `WUBRG`, `C`, or color names.
 
 | Syntax | Meaning |
 |---|---|
@@ -162,9 +131,7 @@ The default operator differs by field:
 
 Only `=`, `<=`, and `>=` are supported for color comparisons.
 
-The default operators follow common deckbuilding search behavior. `c:U` means
-"has blue among its colors", while `id:RG` means "can fit in a red-green color
-identity". Use explicit operators when that default is not what the UI needs.
+The default operators follow common deckbuilding search behavior. `c:U` means "has blue among its colors", while `id:RG` means "can fit in a red-green color identity". Explicit operators override those defaults.
 
 ## Numeric And Date Comparisons
 
@@ -193,12 +160,9 @@ Date terms also support `=`, `<`, `<=`, `>`, and `>=`.
 | `release<2020-01-01` | Alias for `released`. |
 | `date=2026-06-23` | Alias for `released`. |
 
-Date values should use `YYYY-MM-DD`.
+Date values are `YYYY-MM-DD`.
 
-Power, toughness, loyalty, and defense are stored as printed text in the card
-catalog, so the API compares their numeric value when one can be derived. Cards
-with non-numeric printed values may not behave like ordinary numeric cards for
-these filters.
+Power, toughness, loyalty, and defense are stored as printed text in the card catalog, so the API compares their numeric value when one can be derived. Cards with non-numeric printed values may not behave like ordinary numeric cards for these filters.
 
 ## Mana Cost
 
@@ -210,11 +174,9 @@ Mana-cost filters match the exact printed mana cost:
 /cards?q=cost={2}{G}
 ```
 
-Supported keys are `m`, `mana`, `cost`, and `mana_cost`. Cost comparison is not
-numeric. Use `mv`, `cmc`, or `mana_value` for numeric mana-value comparisons.
+Supported keys are `m`, `mana`, `cost`, and `mana_cost`. Cost comparison is not numeric. `mv`, `cmc`, and `mana_value` perform numeric mana-value comparisons.
 
-Mana cost is exact by design. A search for `m:{R}` matches cards printed with
-exactly `{R}`, not every card that contains red mana in its cost.
+Mana cost is exact by design. A search for `m:{R}` matches cards printed with exactly `{R}`, not every card that contains red mana in its cost.
 
 ## Rarity
 
@@ -225,22 +187,15 @@ exactly `{R}`, not every card that contains red mana in its cost.
 | `r>=rare` | Rare or mythic. |
 | `r<rare` | Common or uncommon. |
 
-Rarity comparisons use the normal paper rarity ladder: `common`, `uncommon`,
-`rare`, and `mythic`. MTGO-specific rarity names such as `token`, `bonus`, and
-`promo` can be used as exact values, but they are not part of the comparison
-ladder.
+Rarity comparisons use the normal paper rarity ladder: `common`, `uncommon`, `rare`, and `mythic`. MTGO-specific rarity names such as `token`, `bonus`, and `promo` can be used as exact values, but they are not part of the comparison ladder.
 
-Short aliases such as `c`, `u`, `r`, and `m` are normalized through the same
-generated rarity alias table used by the API validators.
+Short aliases such as `c`, `u`, `r`, and `m` are normalized through the same generated rarity alias table used by the API validators.
 
-Rarity comparison is intended for the normal rarity ladder only. If a client is
-filtering MTGO-specific values such as `token` or `promo`, use exact rarity
-matching rather than `>` or `<`.
+Rarity comparison covers the normal rarity ladder only. Exact rarity matching covers MTGO-specific values such as `token` and `promo`.
 
 ## Types
 
-Type terms search card types, supertypes, subtypes, and multi-word text in the
-printed type line.
+Type terms search card types, supertypes, subtypes, and multi-word text in the printed type line.
 
 ```text
 /cards?q=t:artifact
@@ -249,19 +204,15 @@ printed type line.
 /cards?q=t:"time lord"
 ```
 
-Repeated type terms are combined. Included terms must all match. Excluded terms
-must not match.
+Repeated type terms are combined. Included terms must all match. Excluded terms must not match.
 
-If a query includes the same term as both included and excluded, the API treats
-the query as empty and returns no results:
+If a query includes the same term as both included and excluded, the API treats the query as empty and returns no results:
 
 ```text
 /cards?q=t:artifact -t:artifact
 ```
 
-Single-word type terms match parsed type, supertype, and subtype arrays. A
-quoted multi-word type term falls back to a contains check against the printed
-type line, which is useful for cases such as `t:"time lord"`.
+Single-word type terms match parsed type, supertype, and subtype arrays. A quoted multi-word type term falls back to a contains check against the printed type line, which supports cases such as `t:"time lord"`.
 
 ## Formats And Legalities
 
@@ -282,8 +233,7 @@ The API also accepts legality terms:
 /cards?q=legality:banned
 ```
 
-Legalities are oracle-based. If any printing of the same oracle card has that
-format legality, matching print rows can appear in the result.
+Legalities are oracle-based. If any printing of the same oracle card has that format legality, matching print rows can appear in the result.
 
 Supported legality values are:
 
@@ -293,13 +243,9 @@ Supported legality values are:
 - `restricted`
 - `suspended`
 
-When a query supplies `format` without an explicit legality, the API assumes
-`legal`.
+When a query supplies `format` without an explicit legality, the API assumes `legal`.
 
-This mirrors the common use case for format search: most callers asking for
-`format:modern` expect cards that are currently legal in Modern. Use explicit
-legality terms when the UI needs banned, restricted, suspended, or not-legal
-cards.
+This makes `format:modern` return cards that are legal in Modern. Explicit legality terms return banned, restricted, suspended, or not-legal cards.
 
 ## Artist And Flavor Text
 
@@ -311,16 +257,13 @@ cards.
 /cards?q=ft:"when dragons"
 ```
 
-Artist and flavor filters search card and face attributes. They are
-case-insensitive contains filters.
+Artist and flavor filters search card and face attributes. They are case-insensitive contains filters.
 
-These fields are useful for catalog discovery, but they are not part of normal
-deck legality or gameplay filtering. They may be missing on older or unusual
-MTGO catalog rows when the upstream data does not provide them.
+These fields support catalog discovery rather than normal deck legality or gameplay filtering. Older or unusual MTGO catalog rows may omit them when the upstream data lacks those values.
 
 ## Boolean Flags
 
-Use `is:` terms for API-supported card flags:
+The `is:` namespace contains API-supported card flags:
 
 | Syntax | Meaning |
 |---|---|
@@ -336,13 +279,9 @@ Use `is:` terms for API-supported card flags:
 | `-is:multiface` | No additional face rows. |
 | `-is:split` | No split or subcard relationship. |
 
-Normal searches hide tokens by default. `is:token` changes the search to token
-rows. `include_tokens=true` is a query parameter, not a `q` term; use it when
-tokens may appear alongside normal cards.
+Normal searches hide tokens by default. `is:token` changes the search to token rows. `include_tokens=true` is a query parameter, not a `q` term; it allows tokens to appear alongside normal cards.
 
-`is:multiface` and `is:split` are MTGO catalog predicates. They are useful for
-finding cards with additional face rows or split/subcard relationships, but
-they are not a complete paper-layout taxonomy.
+`is:multiface` and `is:split` are MTGO catalog predicates. They find cards with additional face rows or split/subcard relationships; paper layout taxonomy can differ.
 
 ## Sorting And Uniqueness
 
@@ -383,12 +322,9 @@ Supported unique values:
 | `oracle` | Alias for `cards`. |
 | `oracles` | Alias for `cards`. |
 
-When `order` is omitted, text searches default to `rank`; non-text searches
-default to `name`. When `unique` is omitted, `/cards` returns print rows.
+When `order` is omitted, text searches default to `rank`; non-text searches default to `name`. When `unique` is omitted, `/cards` returns print rows.
 
-Sorting happens after filters are applied. For collection-aware searches with
-`mode=rank`, collection membership is applied before the normal sort so owned
-cards appear first within the matching result set.
+Sorting happens after filters are applied. For collection-aware searches with `mode=rank`, collection membership is applied before the normal sort so owned cards appear first within the matching result set.
 
 ## Negation
 
@@ -401,16 +337,13 @@ Negation is currently supported for type terms and `is:` flags:
 /cards?q=-is:multiface
 ```
 
-Negation is not a general operator. A token such as `-artist:foo` is not parsed
-as "artist is not foo"; it falls back to plain text search.
+Negation support is limited to type terms and `is:` flags. A token such as `-artist:foo` falls back to plain text search instead of meaning "artist is not foo."
 
-If a UI needs general negative filters, add explicit API parameters or a
-dedicated route-level option instead of relying on unimplemented `q` syntax.
+General negative filters require explicit API parameters or a dedicated route-level option.
 
 ## URL Encoding
 
-Characters such as spaces, quotes, braces, `<`, `>`, and `=` should be URL
-encoded by clients. These examples show the readable form:
+Clients URL-encode characters such as spaces, quotes, braces, `<`, `>`, and `=`. These examples show the readable form:
 
 ```text
 /cards?q=!"Lightning Bolt" year>2020
@@ -418,7 +351,7 @@ encoded by clients. These examples show the readable form:
 /cards?q=c<=U
 ```
 
-A browser or HTTP client should send the encoded form:
+Encoded form:
 
 ```text
 /cards?q=!%22Lightning%20Bolt%22%20year%3E2020
@@ -426,18 +359,10 @@ A browser or HTTP client should send the encoded form:
 /cards?q=c%3C%3DU
 ```
 
-Most client libraries handle this when query parameters are supplied as a map or
-`URLSearchParams`. Manual string concatenation is easy to get wrong because
-quotes, braces, and comparison operators all have special meaning in URLs.
+Most client libraries handle this when query parameters are supplied as a map or `URLSearchParams`. Manual string concatenation is easy to get wrong because quotes, braces, and comparison operators all have special meaning in URLs.
 
 ## Unsupported Scryfall Terms
 
-The parser intentionally supports a smaller grammar than Scryfall. Terms that
-are not listed here either become plain text search or are rejected by the route
-validator. Current gaps include full Scryfall layout predicates, keyword ability
-predicates, artist IDs, watermark and border filters, price filters, game and
-paper-set availability terms, and full boolean grouping.
+The parser intentionally supports a smaller grammar than Scryfall. Unlisted terms either become plain text search or are rejected by the route validator. Current gaps include full Scryfall layout predicates, keyword ability predicates, artist IDs, watermark and border filters, price filters, game and paper-set availability terms, and full boolean grouping.
 
-Prefer explicit API parameters when building structured client UIs. Use `q` for
-human-entered search strings, comparison operators, and compact advanced search
-syntax.
+Explicit API parameters are the structured option for client UIs. `q` covers human-entered search strings, comparison operators, and compact advanced search syntax.

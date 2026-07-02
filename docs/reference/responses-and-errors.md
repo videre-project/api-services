@@ -1,15 +1,10 @@
 # Responses And Errors
 
-This page documents the response conventions used by
-`https://api.videreproject.com`.
+This page documents the response conventions used by `https://api.videreproject.com`.
 
-For route-specific fields, see the endpoint docs under [`docs/api`](../api/index.md).
-For cache and runtime limits, see [Rate Limits](rate-limits.md).
+For route-specific fields, see the endpoint docs under [`docs/api`](../api/index.md). For cache and runtime limits, see [Rate Limits](rate-limits.md).
 
-The API is intentionally conservative about response shapes. Most routes return
-arrays at the top level, even when the route normally contains one row. That
-keeps list, detail, and aggregate consumers close to the same parsing model:
-check the HTTP status, inspect `parameters` and `meta`, then read `data`.
+The API is intentionally conservative about response shapes. Most routes return arrays at the top level, even when the route normally contains one row. That keeps list, detail, and aggregate consumers close to the same parsing model: check the HTTP status, inspect `parameters` and `meta`, then read `data`.
 
 ## JSON Responses
 
@@ -19,16 +14,11 @@ API-generated responses use JSON and include:
 Content-Type: application/json
 ```
 
-The API uses two success envelopes. List routes use a paginated list envelope.
-Detail and aggregate routes use a direct query envelope. Both include the parsed
-request parameters and query metadata so clients can inspect what the API
-actually applied.
+The API uses two success envelopes. List routes use a paginated list envelope. Detail and aggregate routes use a direct query envelope. Both include the parsed request parameters and query metadata so clients can inspect what the API actually applied.
 
-Infrastructure responses can be different. A Cloudflare edge rejection, such as
-a rate-limit block, may not use the API's JSON error envelope. Clients should
-always check the HTTP status before assuming the body shape.
+Infrastructure responses can be different. A Cloudflare edge rejection, such as a rate-limit block, can return an infrastructure response instead of the API's JSON error envelope. HTTP status is the first discriminator for every response.
 
-In practice, client code should follow this order:
+Parsing order:
 
 1. Check the HTTP status.
 2. If the response is JSON, parse it.
@@ -62,21 +52,13 @@ Paginated list routes return:
 }
 ```
 
-`object` is always `list` for this envelope. `data` is the current page. The
-route documentation defines the row shape inside `data`.
+`object` is always `list` for this envelope. `data` is the current page. The route documentation defines the row shape inside `data`.
 
-`parameters` contains normalized route and query parameters. It is useful for
-debugging and for confirming defaults. Internal database connection fields are
-not included. Collection-backed card search also summarizes the collection by
-mode, match, and size rather than echoing the submitted ID list.
+`parameters` contains normalized route and query parameters, including applied defaults. The API omits internal database connection fields. Collection-backed card search summarizes the collection by mode, match, and size rather than echoing the submitted ID list.
 
-`meta.exec_ms` is the API-side execution time in milliseconds. It is diagnostic,
-not a service-level guarantee. `meta.database` and `meta.backend` identify the
-database target used by the request and should not be parsed for application
-routing.
+`meta.exec_ms` is the API-side execution time in milliseconds. It is diagnostic context rather than a service-level guarantee. `meta.database` and `meta.backend` identify the database target used by the request, not application routing fields.
 
-Do not use `row_count` as the total number of matching rows. It is the number of
-rows returned in this response. Use `meta.total` only when it is a number.
+`row_count` is the number of rows returned in this response, not the total number of matching rows. `meta.total` is the total only when it is a number.
 
 ## Pagination
 
@@ -97,10 +79,8 @@ Autocomplete has a smaller policy:
 
 There are two pagination modes:
 
-- **Probe pagination:** the API fetches one extra row to determine whether
-  another page exists. `meta.total` is `null`.
-- **Exact-count pagination:** the API runs a count query. `meta.total` is a
-  number.
+- **Probe pagination:** the API fetches one extra row to determine whether another page exists. `meta.total` is `null`.
+- **Exact-count pagination:** the API runs a count query. `meta.total` is a number.
 
 When `meta.has_more` is true, request the next page with:
 
@@ -108,16 +88,11 @@ When `meta.has_more` is true, request the next page with:
 offset=meta.next_offset
 ```
 
-Keep every other filter unchanged while paging. Changing the query changes the
-result set and can make offsets point at different rows.
+Keep every other filter unchanged while paging. Changing the query changes the result set and can make offsets point at different rows.
 
-Card search uses probe pagination by default. Add `include_total=true` only
-when a UI needs the exact result count. Exact totals can be more expensive than
-simply knowing whether another page exists.
+Card search uses probe pagination by default. `include_total=true` asks for an exact result count, which adds count-query work.
 
-For infinite scroll or "load more" UI, probe pagination is usually enough. For
-a table that must show "1-25 of 3,214", request an exact total and accept the
-extra database work.
+Probe pagination provides enough information for infinite scroll and "load more" interfaces. Exact totals provide table copy such as "1-25 of 3,214".
 
 ## Direct Query Envelope
 
@@ -138,17 +113,11 @@ Detail and aggregate routes return:
 }
 ```
 
-This envelope is used when pagination metadata is not part of the route's
-contract. Examples include single-object lookups and aggregate views such as
-metagame, archetype, and matchup summaries.
+This envelope is used when pagination metadata is not part of the route's contract. Examples include single-object lookups and aggregate views such as metagame, archetype, and matchup summaries.
 
-`data` is still an array. A single-card route returns a one-row array rather
-than a bare object, so clients can process detail and aggregate results with the
-same top-level shape.
+`data` is still an array. A single-card route returns a one-row array rather than a bare object, so clients can process detail and aggregate results with the same top-level shape.
 
-Direct query routes do not include `limit`, `offset`, `has_more`, or
-`next_offset` unless the route explicitly documents them. If a route can return
-many rows and needs paging, it uses the list envelope instead.
+Pagination metadata such as `limit`, `offset`, `has_more`, and `next_offset` appears on direct query routes only when the route explicitly documents it. Routes that can return many rows and need paging use the list envelope.
 
 ## Error Envelope
 
@@ -170,15 +139,9 @@ API-generated errors use:
 }
 ```
 
-`body` is optional. It appears when the route has contextual response data to
-include, such as the empty list envelope for a search that matched no rows.
+`body` is optional. Validation errors and some route errors may only include the top-level error fields.
 
-Do not assume every non-2xx response has a `body` field. Validation errors and
-some route errors may only include the top-level error fields.
-
-The error `message` is meant for debugging and simple client display. It is not
-a stable machine-readable error code. For program behavior, branch on HTTP
-status first and then on route context.
+The error `message` is meant for debugging and simple client display. For program behavior, branch on HTTP status first and then on route context instead of treating `message` as a stable machine-readable error code.
 
 ## Empty Results
 
@@ -207,18 +170,12 @@ Many routes return `400 Bad Request` for an empty result:
 }
 ```
 
-This is current API behavior. Treat it as an empty state, not as a retryable
-failure. If a UI wants to distinguish invalid syntax from a valid query with no
-matches, inspect `message` and any included `body`.
+This is current API behavior. `No results found.` is an empty-result signal, and getting rows requires changing the request. The `message` and optional `body` distinguish this from other `400` responses.
 
-This behavior differs from APIs that return `200` with an empty list. It lets
-detail-like routes and list-like routes share the same `No results found.`
-signal. Client libraries should normalize this if they prefer empty lists:
+This behavior differs from APIs that return `200` with an empty list. It lets detail-like routes and list-like routes share the same `No results found.` signal. Client libraries can normalize this to empty lists:
 
-- If status is `400` and `message` is `No results found.`, expose `data` as
-  `[]`.
-- If status is `400` for any other message, expose it as a validation or
-  request error.
+- If status is `400` and `message` is `No results found.`, expose `data` as `[]`.
+- If status is `400` for any other message, expose it as a validation or request error.
 
 ## Validation Errors
 
@@ -242,18 +199,15 @@ Common validation failures include:
 - Collection ID pools larger than 10,000 IDs.
 - Collection IDs that are not positive integers.
 
-Clients should fix the request before retrying.
+The request must change before retrying.
 
-Validation happens before database work. A validation error means the API could
-not safely interpret the request, not that the database lacked matching rows.
+Validation happens before database work. A validation error means the API could not safely interpret the request, not that the database lacked matching rows.
 
 ## Timeout And Fatal Errors
 
-Requests have a Worker timeout and database queries have a shorter query
-timeout. Current values are documented in [Rate Limits](rate-limits.md).
+Requests have a Worker timeout and database queries have a shorter query timeout. Current values are documented in [Rate Limits](rate-limits.md).
 
-Timeout and fatal route errors use API-generated error envelopes when they are
-created inside the Worker:
+Timeout and fatal route errors use API-generated error envelopes when they are created inside the Worker:
 
 ```json
 {
@@ -273,25 +227,19 @@ created inside the Worker:
 }
 ```
 
-Database execution failures are sanitized before being returned to clients.
-Operational details are logged by the Worker rather than exposed in the public
-response.
+Database execution failures are sanitized before being returned to clients. Operational details are logged by the Worker rather than exposed in the public response.
 
-Clients should treat `408` and `500` as retryable only with backoff. If the same
-query repeatedly times out, narrow the filters, reduce `limit`, or avoid exact
-totals before retrying again.
+`408` and `500` are retryable with backoff. If the same query repeatedly times out, narrow the filters, reduce `limit`, or avoid exact totals before retrying again.
 
 ## Rate-Limit Responses
 
-`POST /cards/search` has a Cloudflare edge rate limit. A request rejected at the
-edge may not have the API envelope because it does not reach the Worker.
+`POST /cards/search` has a Cloudflare edge rate limit. Requests rejected at the edge can return a Cloudflare response instead of the API envelope because Cloudflare handles them before the Worker runs.
 
-Clients should key behavior off the status code:
+Status code:
 
 - `429 Too Many Requests`: back off and retry later.
 
-Do not retry immediately. For interactive clients, debounce input and avoid
-leaving multiple collection-backed searches in flight for the same user action.
+Immediate retries can receive the same edge response. Interactive collection searches are most likely to hit this limit when each keystroke sends a new request; debounced input and one in-flight request per user action reduce repeated `429` responses.
 
 ## Not Found
 
@@ -306,18 +254,15 @@ Unknown routes return:
 }
 ```
 
-This means the route was not registered. It is different from an existing route
-returning `No results found.`
+This means the route was not registered. It is different from an existing route returning `No results found.`
 
-## Recommended Client Handling
+## Status Summary
 
-For most clients, the following behavior is sufficient:
+Common response handling:
 
-- `2xx` with `object=list`: render `data` as the current page and use
-  `meta.next_offset` for pagination.
+- `2xx` with `object=list`: render `data` as the current page and use `meta.next_offset` for pagination.
 - `2xx` with a `data` array: render `data` as the direct result.
 - `400` with `message` set to `No results found.`: show an empty state.
 - `400` with any other message: show a request or validation error.
-- `408`, `429`, or `5xx`: retry only with backoff, or ask the user to narrow
-  the query.
+- `408`, `429`, or `5xx`: retry only with backoff, or ask the user to narrow the query.
 - `404`: treat as a client route bug or unsupported endpoint.

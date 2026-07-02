@@ -47,6 +47,12 @@ Run the API regression tests:
 pnpm --filter videre-api test
 ```
 
+To include HTTP route checks against a running local API Worker, start the API and pass its base URL:
+
+```sh
+VIDERE_API_BASE_URL=http://localhost:8787 pnpm --filter videre-api test
+```
+
 The root `dev` and `deploy` scripts run the matching script across every workspace.
 
 ## API Docs
