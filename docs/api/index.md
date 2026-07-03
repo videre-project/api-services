@@ -25,10 +25,10 @@ Catalog routes return MTGO catalog data independent of tournament results.
 |---|---|
 | `/cards` | Paginated card and token catalog rows, with `q` search syntax documented in [Card Search Syntax](../reference/card-search.md). |
 | `/cards/named` | One card selected by exact or fuzzy card-name lookup. |
-| `/cards/autocomplete` | Matching card-name strings for search boxes. |
+| `/cards/autocomplete` | Unique suggestion strings from canonical card names, printed titles, and face names. |
 | `/cards/random` | One random card from the same filtered search space as `/cards`. |
 | `/sets` | MTGO set metadata and catalog counts. |
-| `/products` | Non-card catalog objects such as boosters, tickets, trophies, and sealed products. |
+| `/products` | Non-card MTGO catalog objects such as boosters, tickets, trophies, and sealed products. |
 | `/mtgo/manifest` | Current Daybreak MTGO ClickOnce deployment metadata. |
 
 Event routes return imported MTGO tournament data and Videre aggregate views.
@@ -43,7 +43,9 @@ Event routes return imported MTGO tournament data and Videre aggregate views.
 | `/archetypes` | Card adoption statistics inside each Videre archetype label. |
 | `/matchups` | Archetype-versus-archetype match and game win rates. |
 
-Aggregate routes (such as `/metagame`, `/archetypes`, and `/matchups`) summarize data from events selected by `format`, `event_id`, `min_date`, and `max_date`. They are derived from imported deck, match, standing, and archetype-label rows. Raw event routes such as `/events`, `/decks`, `/matches`, and `/standings` expose the event metadata and source rows used to build those summaries.
+Aggregate routes such as `/metagame`, `/archetypes`, and `/matchups` summarize an event window selected by `format`, `event_id`, `min_date`, and `max_date`. They are derived from imported deck, match, standing, and archetype-label rows.
+
+The aggregate routes expose different summaries over those imported rows: `/metagame` returns archetype share and win-rate rows, `/archetypes` returns card-adoption rows inside each archetype, and `/matchups` returns archetype-pair win-rate rows. Raw event routes such as `/events`, `/decks`, `/matches`, and `/standings` expose the event metadata and source rows used to build those summaries.
 
 For provenance and freshness details, see [Data Sources And Freshness](../reference/data-sources.md).
 
@@ -74,13 +76,13 @@ List endpoints accept pagination through `limit` and `offset` parameters unless 
 | `limit` | 100 | 500 | Controls returned rows. |
 | `offset` | 0 | none | Page with `meta.next_offset`. |
 
-Autocomplete uses a tighter limit policy by default to avoid returning too many results for search-box suggestions:
+Autocomplete uses a tighter limit policy because suggestion responses are intended for compact search-box result sets:
 
 | Endpoint | Default | Maximum |
 |---|---:|---:|
 | `/cards/autocomplete` | 20 | 100 |
 
-Probe-paginated list endpoints fetch one extra row to determine whether another page exists. In those responses, `meta.total` is `null`, while `meta.has_more` and `meta.next_offset` describe the next page. Card search routes also accept `include_total=true`; when that parameter is supplied, the API runs an exact count query and returns the result in `meta.total`. Other list endpoints that calculate totals directly return a numeric `meta.total` without `include_total`.
+Probe-paginated list endpoints fetch one extra row to determine whether another page exists. In those responses, `meta.total` is `null`, while `meta.has_more` and `meta.next_offset` describe the next page. Card search routes (`GET /cards` and `POST /cards/search`) also accept `include_total=true`; when that parameter is supplied, the API runs an exact count query and returns the result in `meta.total`. Card search also calculates an exact total automatically when `limit=500`, the maximum page size. Other list endpoints that calculate totals directly return a numeric `meta.total` without `include_total`.
 
 When `meta.has_more` is true, request the same route again with `offset=meta.next_offset`. Keep the other filters unchanged while paging, since changing the filter set changes the result order and page boundaries.
 

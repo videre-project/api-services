@@ -8,7 +8,7 @@ The matchups API returns archetype-versus-archetype win rates for a format over 
 GET /matchups/:format?
 ```
 
-The endpoint starts from imported match rows, applies the event filters, removes mirror matches, then groups the remaining rows by row archetype and opposing archetype.
+The endpoint starts from imported match rows, applies the event filters, excludes mirror matches, then groups the remaining rows by row archetype and opposing archetype.
 
 Rows use the direct query envelope documented in [API Overview](index.md). The response is an array in `data`; list pagination fields such as `has_more` and `next_offset` are absent from this envelope.
 

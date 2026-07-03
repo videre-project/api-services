@@ -8,7 +8,7 @@ The decks API returns player decklists from imported MTGO events. Each row inclu
 GET /decks/:format?
 ```
 
-The endpoint returns the raw decklist rows selected by `format`, `event_id`, `min_date`, and `max_date`. The aggregate card-adoption view is `/archetypes`, which groups those decklists by current Videre archetype label and counts card appearances.
+The endpoint returns individual decklist rows selected by `format`, `event_id`, `min_date`, and `max_date`. The `/archetypes` aggregate groups these same decklists by current Videre archetype label and counts card appearances inside each group.
 
 ## Filters
 

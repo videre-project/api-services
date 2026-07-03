@@ -8,7 +8,7 @@ The events API lists imported MTGO event records. Each row identifies the event 
 GET /events/:format?
 ```
 
-The endpoint is the index for event-backed data. The returned `id` can be used as `event_id` on `/decks`, `/matches`, `/standings`, `/metagame`, `/archetypes`, and `/matchups` to keep later requests tied to one imported event.
+The endpoint is the event index for tournament-backed data. Each returned `id` is accepted as `event_id` on `/decks`, `/matches`, `/standings`, `/metagame`, `/archetypes`, and `/matchups`, so those routes can be scoped to the same imported event.
 
 ## Filters
 

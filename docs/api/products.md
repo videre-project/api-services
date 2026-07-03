@@ -2,7 +2,7 @@
 
 For shared response, pagination, caching, and rate-limit behavior, see [API Overview](index.md).
 
-The products API lists non-card MTGO catalog entries imported from the catalog. Rows include tickets, boosters, complete sets, preconstructed products, trophies, and other catalog objects. Token catalog rows are returned by `/cards`, not `/products`.
+The products API lists non-card MTGO catalog entries imported from the catalog. Rows include tickets, boosters, complete sets, preconstructed products, trophies, and other catalog objects. Card and token catalog rows are documented in the [Cards API](cards.md).
 
 ```text
 GET /products

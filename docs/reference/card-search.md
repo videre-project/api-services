@@ -337,7 +337,7 @@ Negation is currently supported for type terms and `is:` flags:
 /cards?q=-is:multiface
 ```
 
-Negation support is limited to type terms and `is:` flags. A token such as `-artist:foo` falls back to plain text search instead of meaning "artist is not foo."
+Negation support is limited to type terms and `is:` flags. A token such as `-artist:foo` falls back to plain text search; it is not interpreted as "artist is not foo."
 
 General negative filters require explicit API parameters or a dedicated route-level option.
 
@@ -359,7 +359,7 @@ Encoded form:
 /cards?q=c%3C%3DU
 ```
 
-Most client libraries handle this when query parameters are supplied as a map or `URLSearchParams`. Manual string concatenation is easy to get wrong because quotes, braces, and comparison operators all have special meaning in URLs.
+Most client libraries handle this when query parameters are supplied as a map or `URLSearchParams`. Manually assembled query strings must encode quotes, braces, and comparison operators because those characters have special meaning in URLs.
 
 ## Unsupported Scryfall Terms
 

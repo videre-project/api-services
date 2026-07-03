@@ -16,7 +16,7 @@ Content-Type: application/json
 
 The API uses two success envelopes. List routes use a paginated list envelope. Detail and aggregate routes use a direct query envelope. Both include the parsed request parameters and query metadata so clients can inspect what the API actually applied.
 
-Infrastructure responses can be different. A Cloudflare edge rejection, such as a rate-limit block, can return an infrastructure response instead of the API's JSON error envelope. HTTP status is the first discriminator for every response.
+Cloudflare edge rejections, such as rate-limit blocks, can return an infrastructure response rather than the API's JSON error envelope. HTTP status is the first discriminator for every response.
 
 Parsing order:
 
@@ -141,7 +141,7 @@ API-generated errors use:
 
 `body` is optional. Validation errors and some route errors may only include the top-level error fields.
 
-The error `message` is meant for debugging and simple client display. For program behavior, branch on HTTP status first and then on route context instead of treating `message` as a stable machine-readable error code.
+The error `message` is meant for debugging and simple client display. HTTP status and route context define program behavior; `message` is not a stable machine-readable error code.
 
 ## Empty Results
 
@@ -229,11 +229,11 @@ Timeout and fatal route errors use API-generated error envelopes when they are c
 
 Database execution failures are sanitized before being returned to clients. Operational details are logged by the Worker rather than exposed in the public response.
 
-`408` and `500` are retryable with backoff. If the same query repeatedly times out, narrow the filters, reduce `limit`, or avoid exact totals before retrying again.
+`408` and `500` are retryable with backoff. If the same query repeatedly times out, narrow the filters, reduce `limit`, or omit exact totals before retrying again.
 
 ## Rate-Limit Responses
 
-`POST /cards/search` has a Cloudflare edge rate limit. Requests rejected at the edge can return a Cloudflare response instead of the API envelope because Cloudflare handles them before the Worker runs.
+`POST /cards/search` has a Cloudflare edge rate limit. Requests rejected at the edge can return a Cloudflare response rather than the API envelope because Cloudflare handles them before the Worker runs.
 
 Status code:
 

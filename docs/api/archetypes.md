@@ -2,7 +2,7 @@
 
 For shared response, pagination, caching, and rate-limit behavior, see [API Overview](index.md).
 
-The archetypes API returns card adoption statistics inside Videre archetype labels for a format and event window. Each row contains the archetype sample size plus mainboard and sideboard card statistics. The related `/metagame` route returns popularity and win-rate summaries for that format and event window.
+The archetypes API returns card adoption statistics inside Videre archetype labels for a format and event window. Each row contains the archetype sample size plus mainboard and sideboard card statistics. For the same `format`, `event_id`, `min_date`, and `max_date` selection, `/metagame` returns field-share and win-rate summaries.
 
 ```text
 GET /archetypes/:format?
@@ -69,7 +69,7 @@ Inside `mainboard` and `sideboard`:
 
 Card-stat arrays are sorted by adoption count, then total copies, then average copies, then card name. Cards below 1% adoption in the selected archetype are omitted from these arrays.
 
-Because archetype labels are derived, `id` and `archetype` describe Videre's current classification for those decklists. Store deck IDs from `/decks` when a client needs to reproduce or reclassify individual lists later.
+Archetype labels are derived classification data. The `id` and `archetype` fields describe Videre's current classification for the selected decklists; the source deck IDs are returned by `/decks`.
 
 ## Examples
 

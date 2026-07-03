@@ -15,7 +15,7 @@ POST /cards/search
 20 requests per 10 seconds
 ```
 
-The counter is keyed by client IP and Cloudflare colo. In normal use, treat this as roughly 2 requests per second for one client IP, with a short burst allowance. Cloudflare may count the same IP separately if traffic reaches different colos.
+The counter is keyed by client IP and Cloudflare colo. The published limit is roughly 2 requests per second for one client IP, with a short burst allowance. Cloudflare may count the same IP separately if traffic reaches different colos.
 
 When the limit is exceeded, Cloudflare rejects matching requests before they reach the Worker, so database work is avoided. The mitigation window is short, and retries made during that window receive the same `429` response.
 
@@ -33,14 +33,14 @@ That makes it more expensive than ordinary public GET routes. The endpoint perso
 
 The route supports interactive use. A collection of a few thousand cards is a normal request size. The expensive case is repeated broad searches over large collections, especially when the full collection is sent for every input change.
 
-Lower-cost pattern:
+Typical interactive request profile:
 
 - The user stops typing for a short debounce interval.
 - The client sends one `POST /cards/search` request.
 - The request includes the current collection and a narrow query.
 - The UI renders the returned page and waits for the next deliberate input.
 
-High-cost pattern:
+Request profile most likely to hit the edge limit:
 
 - The client sends a POST request for every keypress.
 - Each request includes thousands of IDs.
@@ -49,7 +49,7 @@ High-cost pattern:
 
 ## GET Route Guardrails
 
-Other public routes rely on lower-level guardrails instead of a dedicated per-route edge rate limit:
+Other public routes are bounded by runtime and pagination guardrails:
 
 | Guardrail | Value |
 |---|---:|
@@ -64,7 +64,7 @@ These routes are cacheable by URL. Sequential paging with `offset=meta.next_offs
 
 The cache makes repeated GET requests cheap only when the URL is identical. Changing `limit`, `offset`, date filters, sort order, or search text creates a different cache key. For list views, stable filters preserve page boundaries. Exact totals add a count query; `meta.has_more` and `meta.next_offset` are available without exact totals on probe-paginated routes.
 
-`GET /cards/random` is also a cacheable GET route. The same URL can return the same random result until the cache expires. Add a meaningful filter if the UI needs a constrained random card, but avoid adding throwaway cache-busting query parameters in normal use.
+`GET /cards/random` is also a cacheable GET route. The same URL can return the same random result until the cache expires. Query parameters are part of the cache key, so meaningful filters such as `set=SOS` or `q=t:dragon` constrain the random-card pool, while throwaway cache-busting parameters create otherwise duplicate cache entries.
 
 ## Error Responses
 
@@ -78,7 +78,7 @@ Retrying a `400` response requires changing the request. `429` and transient `5x
 
 ## Request Patterns
 
-For collection-backed search, lower-cost requests have these properties:
+For collection-backed search, requests that stay within the intended profile have these properties:
 
 - Debounce interactive search input.
 - Send the smallest collection pool that matches the current feature.
@@ -88,10 +88,10 @@ For collection-backed search, lower-cost requests have these properties:
 
 `mode=rank` keeps the full search result available while moving owned cards first. `mode=only` returns only owned cards. `mode=exclude` returns matching cards outside the submitted collection.
 
-For cacheable GET routes, lower-cost requests have stable URLs and sequential paging:
+For cacheable GET routes, cache-friendly requests have stable URLs and sequential paging:
 
 - Reuse URLs when polling.
-- Page with response metadata instead of guessed offsets.
+- Page with `meta.next_offset`.
 - Request exact totals only when the UI needs them.
 
 For sustained higher-volume access, direct SQL through the public database role or a scheduled export reduces HTTP request volume.

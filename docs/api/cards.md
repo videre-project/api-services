@@ -2,7 +2,7 @@
 
 For shared response, pagination, caching, and rate-limit behavior, see [API Overview](index.md).
 
-Videre's card search API adds metadata and search operators on top of MTGO's catalog model. It searches MTGO card catalog entries from the same PostgreSQL database that backs the event API. Token rows can be included explicitly. Sealed products and other non-card catalog objects are returned by `/products`.
+Videre's card API searches MTGO card catalog entries from the same PostgreSQL database that backs the event API. The card routes include deckbuilding metadata, search operators, token rows when requested, card-face data, legality data, and CDN image URLs. Sealed products and other non-card catalog objects are documented in the [Products API](products.md).
 
 For the full `q` parameter grammar, including aliases, comparison operators, and unsupported Scryfall terms, see [Card Search Syntax](../reference/card-search.md).
 
@@ -44,14 +44,14 @@ Quoted values keep spaces together. Explicit query parameters and tagged `q` ter
 
 `exact` uses exact normalized card-name matching across canonical names and printed titles. When the query matches a canonical name, ordinary printings rank ahead of printings with a different `printed_name`; when the query matches a printed title, that printed-title row is returned. `fuzzy` uses the same ranked card search as `/cards?q=...` and returns the top-ranked result. The response shape matches `/cards/:id`: a wrapper with a one-row `data` array.
 
-`/cards/autocomplete` returns unique card-name strings in the standard list envelope:
+`/cards/autocomplete` returns unique card-name suggestion strings in the standard list envelope:
 
 ```text
 /cards/autocomplete?q=lightn
 /cards/autocomplete?q=spirit&include_tokens=true&limit=20
 ```
 
-Autocomplete searches printed card names and face names. It excludes tokens by default unless `include_tokens=true` is supplied. `data` contains strings, not card objects.
+Autocomplete searches canonical card names, printed card titles, canonical face names, and printed face titles. It excludes tokens by default unless `include_tokens=true` is supplied. `data` contains strings, not card objects.
 
 Example autocomplete response, from `/cards/autocomplete?q=lightn&limit=5`:
 
@@ -117,7 +117,7 @@ Set and rarity:
 /cards?q=released>=2024-01-01
 ```
 
-Rarity comparisons use the normal rarity ladder: `common`, `uncommon`, `rare`, and `mythic`. MTGO-specific values such as `token`, `bonus`, and `promo` still work as exact rarity filters.
+Rarity comparisons use the normal rarity ladder: `common`, `uncommon`, `rare`, and `mythic`. MTGO-specific rarity values such as `token`, `bonus`, and `promo` are exact rarity filters rather than ordered rarity values.
 
 Colors and color identity:
 
@@ -182,7 +182,7 @@ The response includes a `legalities` object keyed by format code.
 
 ## Tokens, Products, And Uniqueness
 
-Tokens are cards in the catalog, but normal searches hide them by default. `include_tokens=true` allows token rows to appear alongside normal cards. Token-only filters return token rows without normal cards.
+Tokens are cards in the MTGO catalog. Default card searches return non-token cards; `include_tokens=true` includes token rows alongside non-token cards, and token-only filters return token rows without non-token cards.
 
 ```text
 /cards?q=is:token
@@ -193,7 +193,7 @@ Tokens are cards in the catalog, but normal searches hide them by default. `incl
 /cards?q=is:split
 ```
 
-Sealed products and other MTGO catalog products are returned by `/products`, not `/cards`.
+Sealed products and other non-card MTGO catalog objects are returned by `/products`.
 
 The `unique` option controls print collapsing:
 
@@ -248,12 +248,12 @@ Collection-backed responses include `in_collection` on each returned card and su
 
 `POST /cards/search` is rate limited because each request is personalized and cannot be shared through the public GET cache. See [Rate Limits](../reference/rate-limits.md) for the current public threshold.
 
-Examples:
+Example collection-backed requests:
 
 ```text
-/cards/search?q=type:creature&unique=cards
-/cards/search?exact=Lightning%20Bolt&unique=prints
-/cards/search?q=dragon&order=rank
+POST /cards/search?q=type:creature&unique=cards
+POST /cards/search?exact=Lightning%20Bolt&unique=prints
+POST /cards/search?q=dragon&order=rank
 ```
 
 ## Response Shape
@@ -297,7 +297,7 @@ image_url
 in_collection
 ```
 
-The `name` field is the canonical mechanical card name used by existing clients; `canonical_name` is the same value under an explicit field name. The`printed_name` field is present when the MTGO catalog row has a different printed title, such as Universes Within-style promotional treatments. In all cases, the `display_name` field defaults to `printed_name` when present and otherwise to the canonical name, and is the source for the card-name string used in autocomplete and other UI features.
+The `name` field is the canonical mechanical card name used by existing clients; `canonical_name` is the same value under an explicit field name. `printed_name` is `null` unless the MTGO catalog row has a different printed title, such as Universes Within-style promotional treatments. `display_name` is `printed_name` when present and otherwise the canonical name. `oracle_text` is imported from the MTGO catalog row and can contain the printed title on rows where `printed_name` is set.
 
 `in_collection` is present only on `POST /cards/search` responses that include a collection.
 
@@ -375,6 +375,22 @@ Example list response, from `/cards?exact=Lightning%20Bolt&set=1E&unique=prints&
 }
 ```
 
+Abbreviated printed-title card object:
+
+```json
+{
+  "id": 139943,
+  "set_code": "FCA",
+  "name": "Lightning Bolt",
+  "canonical_name": "Lightning Bolt",
+  "printed_name": "Thrum of the Vestige",
+  "display_name": "Thrum of the Vestige",
+  "promo_label": "FFXIII",
+  "oracle_text": "Thrum of the Vestige deals 3 damage to any target.",
+  "image_url": "https://r2.videreproject.com/cards/139943-300px.png"
+}
+```
+
 ## Sorting And Pagination
 
 ```text
@@ -382,4 +398,4 @@ Example list response, from `/cards?exact=Lightning%20Bolt&set=1E&unique=prints&
 /cards?q=dragon&order=name&include_total=true
 ```
 
-Supported sort keys are `rank`, `name`, `mana_value`, `set`, and `released`. Card search fetches one extra row by default, so `has_more` and `next_offset` are available without running a second exact-count query. `total` is `null` unless `include_total=true` is supplied. `include_total=true` asks the API for an exact result count.
+Supported sort keys are `rank`, `name`, `mana_value`, `set`, and `released`. Card search fetches one extra row by default, so `has_more` and `next_offset` are available without running a second exact-count query. `total` is `null` unless `include_total=true` is supplied or `limit=500` is requested. In those cases, the API runs an exact count query and returns the count in `meta.total`.

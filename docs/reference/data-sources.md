@@ -113,7 +113,7 @@ CardExporter imports MTGO catalog data from the local MTGO client and related cl
 
 The API is intentionally MTGO-focused. A card result describes an MTGO catalog object rather than a universal paper printing. Fields such as `id`, `set_code`, `frame_style`, `promo_label`, `art_id`, and product `object_type` come from the MTGO catalog model.
 
-Card rows can also expose more than one name, e.g. for promo editions of cards from FINAL FANTASY Through The Ages (FCA). Both `name` and `canonical_name` identify the mechanical/oracle card name used for grouping, legality, and existing name-based clients. Though `printed_name` is only set when MTGO provides a different printed title for that catalog row. In any case, `display_name` is the title to show on screen: it uses `printed_name` when present and otherwise falls back to the canonical name.
+Card rows can also expose more than one name, e.g. for promo editions of cards from FINAL FANTASY Through The Ages (FCA). Both `name` and `canonical_name` identify the mechanical/oracle card name used for grouping, legality, and existing name-based clients. `printed_name` is set only when MTGO provides a different printed title for that catalog row. `display_name` is the title to show on screen: it uses `printed_name` when present and otherwise falls back to the canonical name.
 
 CardExporter writes the catalog tables used by the API:
 
