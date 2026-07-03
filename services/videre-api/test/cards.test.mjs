@@ -156,6 +156,98 @@ const apiCardNameAutocomplete = (overrides = {}) => {
   return sql.unsafe(query.text, [...query.values]);
 };
 
+const autocompleteRankScores = (q, names) => sql`
+  WITH raw_search AS (
+    SELECT lower(btrim(coalesce(${q}::text, ''))) AS value
+  ),
+  search AS (
+    SELECT
+      value,
+      split_part(value, ' ', 1) AS first_term,
+      terms,
+      cardinality(terms) AS term_count,
+      CASE
+        WHEN cardinality(terms) > 1 THEN
+          '(^|[^[:alnum:]])'
+          || array_to_string(terms, '[[:alnum:]]*.*(^|[^[:alnum:]])')
+          || '[[:alnum:]]*'
+        ELSE NULL
+      END AS ordered_terms_pattern
+    FROM (
+      SELECT
+        value,
+        array_remove(
+          regexp_split_to_array(
+            btrim(regexp_replace(value, '[^[:alnum:]]+', ' ', 'g')),
+            ' '
+          ),
+          ''
+        ) AS terms
+      FROM raw_search
+    ) tokenized_search
+  ),
+  input_names AS (
+    SELECT
+      name,
+      ord::int AS ordinal,
+      lower(name) AS normalized_name
+    FROM unnest(${names}::text[]) WITH ORDINALITY AS input(name, ord)
+  )
+  SELECT
+    input_names.name,
+    input_names.ordinal,
+    input_names.normalized_name LIKE search.value || '%' AS is_prefix,
+    CASE
+      WHEN search.term_count > 2 THEN
+        input_names.normalized_name ~ search.ordered_terms_pattern
+      ELSE FALSE
+    END AS ordered_terms_strong_match,
+    input_names.normalized_name LIKE search.first_term || '%' AS starts_with_first_term,
+    CASE
+      WHEN search.term_count > 1 THEN
+        input_names.normalized_name ~ search.ordered_terms_pattern
+      ELSE FALSE
+    END AS ordered_terms_match,
+    CASE
+      WHEN search.term_count > 1 THEN (
+        SELECT count(*)::int
+        FROM unnest(search.terms) AS term
+        WHERE input_names.normalized_name ~ (
+          '(^|[^[:alnum:]])' || term || '[[:alnum:]]*'
+        )
+      )
+      ELSE 0
+    END AS token_prefix_matches,
+    word_similarity(search.value, input_names.normalized_name)::float8 AS ordered_rank,
+    similarity(input_names.normalized_name, search.value)::float8 AS rank
+  FROM input_names
+  CROSS JOIN search
+  ORDER BY input_names.ordinal
+`;
+
+const compareAutocompleteRankScores = (left, right) => {
+  const rankKeys = [
+    'is_prefix',
+    'ordered_terms_strong_match',
+    'starts_with_first_term',
+    'ordered_terms_match',
+    'token_prefix_matches',
+    'ordered_rank',
+    'rank',
+  ];
+
+  for (const key of rankKeys) {
+    const leftValue = Number(left[key]);
+    const rightValue = Number(right[key]);
+
+    if (Math.abs(leftValue - rightValue) > 1e-9) {
+      return leftValue - rightValue;
+    }
+  }
+
+  return 0;
+};
+
 test('name search finds Lightning Bolt cards and emits card image URLs', async () => {
   const rows = await apiCards({ q: 'lightning bolt', limit: 10 });
 
@@ -172,6 +264,23 @@ test('card name autocomplete returns ranked unique names', async () => {
   assert.ok(rows.length > 0);
   assert.ok(rows.some((row) => row.name === 'Lightning Bolt'));
   assert.equal(new Set(rows.map((row) => row.name)).size, rows.length);
+});
+
+test('card name autocomplete orders results by rank tuple', async () => {
+  for (const q of ['Lightning Bo', 'Lightning Security Ser', 'Lightning Army One']) {
+    const rows = await apiCardNameAutocomplete({ q, limit: 20 });
+    const names = rows.map((row) => row.name);
+    const scores = await autocompleteRankScores(q, names);
+
+    assert.equal(scores.length, names.length);
+
+    for (let i = 0; i < scores.length - 1; i++) {
+      assert.ok(
+        compareAutocompleteRankScores(scores[i], scores[i + 1]) >= 0,
+        `${q}: ${scores[i].name} should not rank before ${scores[i + 1].name}`
+      );
+    }
+  }
 });
 
 test('Lightning Bolt legality comes from Modern-era core printings, not Pioneer reprints', async () => {

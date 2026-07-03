@@ -358,6 +358,12 @@ test('autocomplete SQL includes printed name candidates', () => {
   assert.match(query.text, /"c"."printed_name"/);
   assert.match(query.text, /"cf"."printed_name"/);
   assert.match(query.text, /source_priority/);
+  assert.match(query.text, /starts_with_first_term/);
+  assert.match(query.text, /ordered_terms_match/);
+  assert.match(query.text, /ordered_terms_strong_match/);
+  assert.match(query.text, /token_prefix_matches/);
+  assert.match(query.text, /word_similarity/);
+  assert.match(query.text, /ORDER BY\s+is_prefix DESC,\s+ordered_terms_strong_match DESC,\s+starts_with_first_term DESC,\s+ordered_terms_match DESC,\s+token_prefix_matches DESC,/);
   assert.ok(query.values.includes('thrum'));
 });
 
