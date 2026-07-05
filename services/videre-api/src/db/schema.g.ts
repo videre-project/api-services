@@ -11,6 +11,8 @@ export const FORMATS = [
   "Legacy",
   "Pauper",
   "Premodern",
+  "Extended",
+  "Classic",
 ] as const;
 
 export type FormatType = typeof FORMATS[number];
@@ -21,6 +23,9 @@ export const EVENTS = [
   "Challenge",
   "Showcase",
   "Qualifier",
+  "Daily",
+  "Premier",
+  "Championship",
 ] as const;
 
 export type EventType = typeof EVENTS[number];
@@ -53,6 +58,7 @@ export const TABLE_COLUMNS = {
     "name",
     "archetype",
     "archetype_id",
+    "provider",
   ],
   "card_catalog_variants": [
     "catalog_id",
@@ -73,9 +79,7 @@ export const TABLE_COLUMNS = {
     "face_index",
     "source_catalog_id",
     "name",
-    "printed_name",
     "name_normalized",
-    "printed_name_normalized",
     "colors",
     "color_mask",
     "mana_value",
@@ -93,8 +97,10 @@ export const TABLE_COLUMNS = {
     "artist",
     "art_id",
     "raw",
-    "search_vector",
     "card_type_mask",
+    "printed_name",
+    "printed_name_normalized",
+    "search_vector",
   ],
   "card_legalities": [
     "oracle_id",
@@ -110,9 +116,7 @@ export const TABLE_COLUMNS = {
     "set_code",
     "collector_number",
     "name",
-    "printed_name",
     "name_normalized",
-    "printed_name_normalized",
     "art_id",
     "artist",
     "card_texture_number",
@@ -146,8 +150,10 @@ export const TABLE_COLUMNS = {
     "first_seen_at",
     "last_seen_at",
     "raw",
-    "search_vector",
     "card_type_mask",
+    "printed_name",
+    "printed_name_normalized",
+    "search_vector",
   ],
   "decks": [
     "id",
