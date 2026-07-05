@@ -29,6 +29,14 @@ const sql = postgres({
   },
 });
 
+test('aggregate event builders exclude leagues', () => {
+  const decks = buildDecksQuery({ format: 'Modern' });
+  const matches = buildMatchesQuery({ format: 'Modern' });
+
+  assert.match(decks.text, /"e"\."kind" <> 'League'::EventType/);
+  assert.match(matches.text, /"e"\."kind" <> 'League'::EventType/);
+});
+
 test.after(async () => {
   await sql.end({ timeout: 5 });
 });

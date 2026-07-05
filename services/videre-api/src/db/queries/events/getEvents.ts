@@ -47,7 +47,9 @@ export const getDecks = (
     FROM Archetypes a
     INNER JOIN Decks d ON d.id = a.deck_id
     INNER JOIN event_entries e ON e.id = d.event_id
-    WHERE a.archetype_id IS NOT NULL
+    WHERE
+      e.kind <> 'League'::EventType
+      AND a.archetype_id IS NOT NULL
     ORDER BY
       a.id DESC
   `;
@@ -88,6 +90,8 @@ export const getMatches = (
     INNER JOIN Archetypes a1 ON a1.deck_id = d1.id
     INNER JOIN Archetypes a2 ON a2.deck_id = d2.id
     INNER JOIN event_entries e ON e.id = m.event_id
+    WHERE
+      e.kind <> 'League'::EventType
     ORDER BY
       m.event_id,
       m.round,

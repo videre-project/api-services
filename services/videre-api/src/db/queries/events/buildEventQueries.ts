@@ -85,6 +85,7 @@ export const buildDecksQuery = (params: EventQueryParams): CompiledSql =>
     INNER JOIN ${archetypes.source} ON ${archetypes.column('deck_id')} = ${decks.column('id')}
     WHERE ${and([
       eventPredicates(params),
+      sql`${events.column('kind')} <> 'League'::EventType`,
       sql`${archetypes.column('archetype_id')} IS NOT NULL`,
     ])}
   `);
@@ -100,7 +101,10 @@ export const buildMatchesQuery = (params: EventQueryParams): CompiledSql =>
                              AND ${deck2.column('player')} = ${matches.column('opponent')}
     INNER JOIN ${archetype1.source} ON ${archetype1.column('deck_id')} = ${deck1.column('id')}
     INNER JOIN ${archetype2.source} ON ${archetype2.column('deck_id')} = ${deck2.column('id')}
-    WHERE ${eventPredicates(params)}
+    WHERE ${and([
+      eventPredicates(params),
+      sql`${events.column('kind')} <> 'League'::EventType`,
+    ])}
   `);
 
 function eventPredicates(params: EventQueryParams): SqlFragment {

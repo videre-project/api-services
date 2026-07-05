@@ -94,6 +94,8 @@ export type IMatch = {
 export type EventDataQueryParams = EventQueryParams & {
   readonly player?: string | null,
   readonly archetype?: string | null,
+  readonly limit?: number | null,
+  readonly offset?: number | null,
 };
 
 const eventDateFormatShape = {
