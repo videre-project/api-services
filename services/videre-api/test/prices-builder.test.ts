@@ -90,6 +90,52 @@ test('builder-backed price SQL handles latest, history, and batch shapes when pr
   assert.ok(batchRows.some((row) => row.id === candidate.catalog_id));
 });
 
+test('high-volume price batch lookups run against deterministic 2K and 10K pools', {
+  timeout: 60_000,
+}, async () => {
+  const latestDate = await latestGoatBotsPriceDate();
+  if (!latestDate) {
+    return;
+  }
+
+  const knownId = await knownPricedCatalogId(latestDate);
+  if (!knownId) {
+    return;
+  }
+
+  const pool2k = await deterministicPricedCatalogPool(2_000, 0, latestDate);
+  const pool10k = await deterministicPricedCatalogPool(10_000, 7_919, latestDate);
+  const cases = [
+    {
+      name: 'latest',
+      date: 'latest',
+    },
+    {
+      name: 'dated latest',
+      date: latestDate,
+    },
+  ];
+
+  for (const [label, ids] of [
+    ['2k', withKnownCatalogId(pool2k, knownId)],
+    ['10k', withKnownCatalogId(pool10k, knownId)],
+  ] as const) {
+    for (const testCase of cases) {
+      const start = performance.now();
+      const rows = await apiBatchPrices({
+        ids,
+        date: testCase.date,
+      });
+      const elapsed = Number((performance.now() - start).toFixed(3));
+      const returnedIds = new Set(rows.map((row) => Number(row.id)));
+
+      console.log(`prices ${label} ${testCase.name}: ${elapsed}ms`);
+      assert.equal(rows.length, ids.length, JSON.stringify({ label, case: testCase.name }));
+      assert.ok(ids.every((id) => returnedIds.has(id)), JSON.stringify({ label, case: testCase.name }));
+    }
+  }
+});
+
 test('HTTP /prices/:id returns latest price metadata', { skip: !apiBaseUrl }, async () => {
   const body = await fetchPriceRoute('/prices/11');
 
@@ -141,6 +187,52 @@ test('HTTP POST /prices validates empty ID lists', { skip: !apiBaseUrl }, async 
   assert.equal(body.object, 'error');
   assert.match(body.message, /ids cannot be empty/);
 });
+
+async function apiBatchPrices(params: Parameters<typeof buildBatchPricesQuery>[0]) {
+  const query = buildBatchPricesQuery(params);
+
+  return sql.unsafe(query.text, [...query.values]);
+}
+
+async function latestGoatBotsPriceDate(): Promise<string | null> {
+  const [row] = await sql`
+    SELECT max(price_date)::text AS price_date
+    FROM catalog_price_history
+    WHERE source = 'goatbots'
+  `;
+
+  return row?.price_date ?? null;
+}
+
+async function deterministicPricedCatalogPool(limit: number, salt: number, priceDate: string): Promise<number[]> {
+  const rows = await sql`
+    SELECT catalog_id
+    FROM catalog_price_history
+    WHERE source = 'goatbots'
+      AND price_date = ${priceDate}::date
+    ORDER BY md5((catalog_id + ${salt}::int)::text)
+    LIMIT ${limit}::int
+  `;
+
+  return rows.map((row) => Number(row.catalog_id));
+}
+
+async function knownPricedCatalogId(priceDate: string): Promise<number | null> {
+  const [row] = await sql`
+    SELECT catalog_id
+    FROM catalog_price_history
+    WHERE source = 'goatbots'
+      AND price_date = ${priceDate}::date
+    ORDER BY catalog_id
+    LIMIT 1
+  `;
+
+  return row ? Number(row.catalog_id) : null;
+}
+
+function withKnownCatalogId(ids: readonly number[], id: number): number[] {
+  return [id, ...ids.filter((value) => value !== id)].slice(0, ids.length);
+}
 
 async function fetchPriceRoute(path: string) {
   const response = await fetch(new URL(path, apiBaseUrl ?? 'http://localhost'));
