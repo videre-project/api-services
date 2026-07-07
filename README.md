@@ -61,6 +61,7 @@ The root `dev` and `deploy` scripts run the matching script across every workspa
 - [Cards API](docs/api/cards.md)
 - [Sets API](docs/api/sets.md)
 - [Products API](docs/api/products.md)
+- [Prices API](docs/api/prices.md)
 - [Events API](docs/api/events.md)
 - [Decks API](docs/api/decks.md)
 - [Matches API](docs/api/matches.md)

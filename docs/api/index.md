@@ -29,6 +29,7 @@ Catalog routes return MTGO catalog data independent of tournament results.
 | `/cards/random` | One random card from the same filtered search space as `/cards`. |
 | `/sets` | MTGO set metadata and catalog counts. |
 | `/products` | Non-card MTGO catalog objects such as boosters, tickets, trophies, and sealed products. |
+| `/prices` | GoatBots sell-price history for MTGO catalog IDs. |
 | `/mtgo/manifest` | Current Daybreak MTGO ClickOnce deployment metadata. |
 
 Event routes return imported MTGO tournament data and Videre aggregate views.

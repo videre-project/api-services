@@ -5,5 +5,6 @@
 
 export * from './cards';
 export * from './events';
+export * from './prices';
 export * from './products';
 export * from './sets';

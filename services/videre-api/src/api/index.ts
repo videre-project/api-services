@@ -17,6 +17,7 @@ import matchups from './matchups';
 import matches from './matches';
 import metagame from './metagame';
 import mtgo from './mtgo';
+import prices from './prices';
 import products from './products';
 import sets from './sets';
 import standings from './standings';
@@ -43,6 +44,8 @@ export default Router({ before: [preflight], finally: [asJSON, corsify] })
   .all('/metagame/*', metagame.fetch)
   .all('/mtgo', mtgo.fetch)
   .all('/mtgo/*', mtgo.fetch)
+  .all('/prices', prices.fetch)
+  .all('/prices/*', prices.fetch)
   .all('/products', products.fetch)
   .all('/products/*', products.fetch)
   .all('/sets', sets.fetch)
