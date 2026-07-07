@@ -106,19 +106,26 @@ export const buildBatchPricesQuery = (params: PriceBatchParams): CompiledSql => 
 
 function latestBatchSubquery(source?: string | null): SqlFragment {
   return sql`
-    SELECT DISTINCT ON (${priceHistory.column('catalog_id')})
-      ${priceHistory.column('source')},
-      ${priceHistory.column('price_date')},
-      ${priceHistory.column('catalog_id')},
-      ${priceHistory.column('sell_price')}
-    FROM ${priceHistory.source}
-    INNER JOIN ${ident(requestedIdsAlias)} requested_ids
-      ON requested_ids.catalog_id = ${priceHistory.column('catalog_id')}
-    WHERE ${sourcePredicate(source)}
-    ORDER BY
-      ${priceHistory.column('catalog_id')},
-      ${priceHistory.column('price_date')} DESC,
-      ${priceHistory.column('source')}
+    SELECT
+      latest_price.source,
+      latest_price.price_date,
+      latest_price.catalog_id,
+      latest_price.sell_price
+    FROM ${ident(requestedIdsAlias)}
+    CROSS JOIN LATERAL (
+      SELECT
+        ${priceHistory.column('source')},
+        ${priceHistory.column('price_date')},
+        ${priceHistory.column('catalog_id')},
+        ${priceHistory.column('sell_price')}
+      FROM ${priceHistory.source}
+      WHERE ${and([
+        sourcePredicate(source),
+        sql`${priceHistory.column('catalog_id')} = ${ident(requestedIdsAlias, 'catalog_id')}`,
+      ])}
+      ORDER BY ${priceHistory.column('price_date')} DESC, ${priceHistory.column('source')}
+      LIMIT 1
+    ) latest_price
   `;
 }
 

@@ -33,6 +33,8 @@ test('price batch SQL keeps catalog IDs parameterized', () => {
   });
 
   assert.match(query.text, /jsonb_array_elements_text\(\(\$\d+\)::text::jsonb\)/);
+  assert.match(query.text, /CROSS JOIN LATERAL/);
+  assert.doesNotMatch(query.text, /DISTINCT ON/);
   assert.doesNotMatch(query.text, /1195/);
   assert.ok(query.values.includes('[1,605,1195]'));
 });
@@ -54,17 +56,20 @@ test('price date SQL casts API date strings to date values', () => {
 });
 
 test('builder-backed price SQL handles latest, history, and batch shapes when prices exist', async () => {
-  const [candidate] = await sql`
-    SELECT catalog_id, max(price_date)::text AS price_date
-    FROM catalog_price_history
-    GROUP BY catalog_id
-    ORDER BY max(price_date) DESC, catalog_id
-    LIMIT 1
-  `;
-
-  if (!candidate) {
+  const latestDate = await latestGoatBotsPriceDate();
+  if (!latestDate) {
     return;
   }
+
+  const candidateId = await knownPricedCatalogId(latestDate);
+  if (!candidateId) {
+    return;
+  }
+
+  const candidate = {
+    catalog_id: candidateId,
+    price_date: latestDate,
+  };
 
   const latest = buildLatestPriceQuery({ id: candidate.catalog_id });
   const latestRows = await sql.unsafe(latest.text, [...latest.values]);
