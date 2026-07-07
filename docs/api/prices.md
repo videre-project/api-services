@@ -7,10 +7,10 @@ The prices API returns GoatBots daily average sell prices in event tickets for M
 ```text
 GET /prices/:id
 GET /prices/:id/history?from=&to=&limit=&offset=
-POST /prices/search
+POST /prices
 ```
 
-`/prices/:id` returns the latest known price for one MTGO catalog ID. `/prices/:id/history` returns dated rows for that ID. `POST /prices/search` accepts a JSON body:
+`/prices/:id` returns the latest known price for one MTGO catalog ID. `/prices/:id/history` returns dated rows for that ID. `POST /prices` accepts a JSON body:
 
 ```json
 {
@@ -19,7 +19,17 @@ POST /prices/search
 }
 ```
 
-`date` may be `latest` or a `YYYY-MM-DD` price date. Batch responses include `meta.missing_ids` for requested catalog IDs with no matching price row.
+`date` may be `latest` or a `YYYY-MM-DD` price date. Batch requests may also use the same collection ID wrapper accepted by `POST /cards/search`:
+
+```json
+{
+  "collection": {
+    "ids": [605, 1195]
+  }
+}
+```
+
+Batch responses include `meta.missing_ids` for requested catalog IDs with no matching price row.
 
 ## Response Shape
 

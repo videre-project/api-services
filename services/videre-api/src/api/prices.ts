@@ -42,6 +42,11 @@ export const historyArgs = {
 };
 
 export default Router({ base: '/prices' })
+  .post('/',
+    readBatchPriceParams,
+    withPostgres,
+    handleBatchPriceRequest
+  )
   .get('/:id/history',
     withValidation(historyArgs),
     withPostgres,
@@ -80,38 +85,6 @@ export default Router({ base: '/prices' })
       );
     }
   )
-  .post('/search',
-    async (req, { params }) => {
-      const body = await readPriceSearchBody(req);
-      if (body instanceof Response) {
-        body.headers.set('Cache-Control', 'private, no-store');
-        return body;
-      }
-
-      params.ids = body.ids;
-      params.date = body.date;
-    },
-    withPostgres,
-    async (req, { sql, params }) => {
-      const queryParams: PriceBatchParams = {
-        ids: params.ids as readonly number[],
-        date: params.date as 'latest' | string,
-      };
-      const start = performance.now();
-      const data = normalizePrices(await getBatchPrices(sql, queryParams));
-      const returnedIds = new Set(data.map((row) => row.id));
-      const missingIds = queryParams.ids.filter((id) => !returnedIds.has(id));
-      const response = buildListResponse(
-        { ...params, date: queryParams.date, ids: { size: queryParams.ids.length } },
-        data,
-        data.length,
-        start
-      );
-      (response.meta as Record<string, unknown>).missing_ids = missingIds;
-
-      return asJSON(response, { headers: { 'Cache-Control': 'private, no-store' } });
-    }
-  )
   .get('/:id',
     withValidation(detailArgs),
     withPostgres,
@@ -128,6 +101,37 @@ export default Router({ base: '/prices' })
       return buildListResponse(params, data, data.length, start);
     }
   );
+
+async function readBatchPriceParams(req: IRequest, { params }: any, _env: any): Promise<Response | void> {
+  const body = await readPriceSearchBody(req);
+  if (body instanceof Response) {
+    body.headers.set('Cache-Control', 'private, no-store');
+    return body;
+  }
+
+  params.ids = body.ids;
+  params.date = body.date;
+}
+
+async function handleBatchPriceRequest(req: IRequest, { sql, params }: any, _env: any): Promise<Response> {
+  const queryParams: PriceBatchParams = {
+    ids: params.ids as readonly number[],
+    date: params.date as 'latest' | string,
+  };
+  const start = performance.now();
+  const data = normalizePrices(await getBatchPrices(sql, queryParams));
+  const returnedIds = new Set(data.map((row) => row.id));
+  const missingIds = queryParams.ids.filter((id) => !returnedIds.has(id));
+  const response = buildListResponse(
+    { ...params, date: queryParams.date, ids: { size: queryParams.ids.length } },
+    data,
+    data.length,
+    start
+  );
+  (response.meta as Record<string, unknown>).missing_ids = missingIds;
+
+  return asJSON(response, { headers: { 'Cache-Control': 'private, no-store' } });
+}
 
 function normalizePrices(rows: readonly ICatalogPrice[]): PriceResponseRow[] {
   return rows.map(normalizePrice);
@@ -173,19 +177,20 @@ async function readPriceSearchBody(req: IRequest): Promise<{ ids: readonly numbe
     return Error(400, 'Request body must be an object.');
   }
 
-  if (!Array.isArray(body.ids)) {
-    return Error(400, 'ids must be an array of MTGO catalog IDs.');
+  const idsBody = readIdsBody(body);
+  if (idsBody instanceof Response) {
+    return idsBody;
   }
 
-  if (body.ids.length === 0) {
-    return Error(400, 'ids cannot be empty.');
+  if (idsBody.ids.length === 0) {
+    return Error(400, `${idsBody.key} cannot be empty.`);
   }
 
-  if (body.ids.length > MAX_BATCH_PRICE_IDS) {
-    return Error(400, `ids cannot contain more than ${MAX_BATCH_PRICE_IDS} IDs.`);
+  if (idsBody.ids.length > MAX_BATCH_PRICE_IDS) {
+    return Error(400, `${idsBody.key} cannot contain more than ${MAX_BATCH_PRICE_IDS} IDs.`);
   }
 
-  const ids = normalizeIds(body.ids);
+  const ids = normalizeIds(idsBody.ids, idsBody.key);
   if (ids instanceof Response) {
     return ids;
   }
@@ -201,12 +206,32 @@ async function readPriceSearchBody(req: IRequest): Promise<{ ids: readonly numbe
   };
 }
 
-function normalizeIds(ids: readonly unknown[]): readonly number[] | Response {
+function readIdsBody(body: Record<string, unknown>): { ids: readonly unknown[], key: 'ids' | 'collection.ids' } | Response {
+  if (body.ids !== undefined) {
+    return Array.isArray(body.ids)
+      ? { ids: body.ids, key: 'ids' }
+      : Error(400, 'ids must be an array of MTGO catalog IDs.');
+  }
+
+  if (body.collection !== undefined && body.collection !== null) {
+    if (!isRecord(body.collection)) {
+      return Error(400, 'collection must be an object.');
+    }
+
+    return Array.isArray(body.collection.ids)
+      ? { ids: body.collection.ids, key: 'collection.ids' }
+      : Error(400, 'collection.ids must be an array of MTGO catalog IDs.');
+  }
+
+  return Error(400, 'ids must be an array of MTGO catalog IDs.');
+}
+
+function normalizeIds(ids: readonly unknown[], key: 'ids' | 'collection.ids'): readonly number[] | Response {
   const normalized = new Set<number>();
 
   for (const id of ids) {
     if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
-      return Error(400, 'ids must contain positive integer MTGO catalog IDs.');
+      return Error(400, `${key} must contain positive integer MTGO catalog IDs.`);
     }
 
     normalized.add(id);

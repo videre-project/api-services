@@ -111,8 +111,8 @@ test('HTTP /prices/:id/history supports exact date ranges', { skip: !apiBaseUrl 
   assert.equal(body.data[0].price_date, '2026-07-06');
 });
 
-test('HTTP POST /prices/search reports missing IDs', { skip: !apiBaseUrl }, async () => {
-  const body = await postPriceRoute('/prices/search', {
+test('HTTP POST /prices reports missing IDs', { skip: !apiBaseUrl }, async () => {
+  const body = await postPriceRoute('/prices', {
     ids: [1, 11],
     date: 'latest',
   });
@@ -122,8 +122,21 @@ test('HTTP POST /prices/search reports missing IDs', { skip: !apiBaseUrl }, asyn
   assert.deepEqual(body.meta.missing_ids, [1]);
 });
 
-test('HTTP POST /prices/search validates empty ID lists', { skip: !apiBaseUrl }, async () => {
-  const body = await postPriceRouteStatus('/prices/search', { ids: [] }, 400);
+test('HTTP POST /prices accepts collection ID bodies', { skip: !apiBaseUrl }, async () => {
+  const body = await postPriceRoute('/prices', {
+    collection: {
+      ids: [1, 11],
+    },
+  });
+
+  assert.equal(body.object, 'list');
+  assert.deepEqual(body.data.map((row) => row.id), [11]);
+  assert.deepEqual(body.parameters.ids, { size: 2 });
+  assert.deepEqual(body.meta.missing_ids, [1]);
+});
+
+test('HTTP POST /prices validates empty ID lists', { skip: !apiBaseUrl }, async () => {
+  const body = await postPriceRouteStatus('/prices', { ids: [] }, 400);
 
   assert.equal(body.object, 'error');
   assert.match(body.message, /ids cannot be empty/);
