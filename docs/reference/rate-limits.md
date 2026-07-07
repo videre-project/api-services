@@ -21,6 +21,17 @@ When the limit is exceeded, Cloudflare rejects matching requests before they rea
 
 This limit applies to the personalized route rather than every API route because each request can carry a large body and a different collection context.
 
+## POST Body Guardrails
+
+Uncached POST routes cap inline ID arrays before doing database work:
+
+| Route | Body field | Maximum IDs |
+|---|---|---:|
+| `POST /cards/search` | `collection.ids` | 10,000 |
+| `POST /prices` | `ids` or `collection.ids` | 10,000 |
+
+The cap is applied to the submitted array before duplicate IDs are removed.
+
 ## Why Only `/cards/search`
 
 `POST /cards/search` can include a caller-provided collection of up to 10,000 MTGO catalog IDs. The response depends on the request body, so it uses a private cache policy:

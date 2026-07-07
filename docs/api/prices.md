@@ -29,7 +29,7 @@ POST /prices
 }
 ```
 
-Batch responses include `meta.missing_ids` for requested catalog IDs with no matching price row.
+Batch responses include `meta.missing_ids` for requested catalog IDs with no matching price row. Batch requests are capped at 10,000 IDs. The cap is applied before duplicate IDs are removed.
 
 ## Response Shape
 
