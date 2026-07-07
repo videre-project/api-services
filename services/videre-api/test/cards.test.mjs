@@ -554,6 +554,32 @@ test('collection counts use the filtered search universe', async () => {
   assert.equal(count, 2);
 });
 
+test('collection product searches use product catalog IDs', async () => {
+  const [candidate] = await sql`
+    SELECT id
+    FROM products
+    ORDER BY id
+    LIMIT 1
+  `;
+
+  assert.ok(candidate);
+
+  const productQuery = buildProductsQuery({
+    limit: 10,
+    collection: {
+      ids: [Number(candidate.id), 605],
+      mode: 'only',
+      match: 'prints',
+    },
+  });
+  const rows = await sql.unsafe(productQuery.text, [...productQuery.values]);
+
+  assert.ok(rows.length >= 1);
+  assert.ok(rows.every((row) => row.in_collection === true));
+  assert.ok(rows.some((row) => Number(row.id) === Number(candidate.id)));
+  assert.ok(rows.every((row) => /^https:\/\/r2\.videreproject\.com\/products\/\d+-300px\.png$/.test(row.image_url)));
+});
+
 test('high-volume collection searches run against deterministic 2K and 10K pools', {
   timeout: 60_000,
 }, async () => {
@@ -763,6 +789,25 @@ test('HTTP POST /cards/search supports collection-only searches', { skip: !apiBa
     match: 'prints',
     size: 1,
   });
+});
+
+test('HTTP POST /cards/search supports product-only collection searches', { skip: !apiBaseUrl }, async () => {
+  const body = await postCardRoute(
+    `/cards/search?q=${encodeURIComponent('is:product')}&limit=5`,
+    {
+      collection: {
+        ids: [1, 605],
+        mode: 'only',
+        match: 'prints',
+      },
+    }
+  );
+
+  assert.equal(body.object, 'list');
+  assert.ok(body.data.length >= 1);
+  assert.ok(body.data.every((product) => product.in_collection === true));
+  assert.ok(body.data.every((product) => product.image_url.includes('/products/')));
+  assert.equal(body.parameters.is_product, true);
 });
 
 test('HTTP POST /cards/search rejects invalid collection IDs', { skip: !apiBaseUrl }, async () => {

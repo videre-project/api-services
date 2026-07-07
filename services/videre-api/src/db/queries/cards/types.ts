@@ -53,6 +53,7 @@ export type CardQueryParams = {
   readonly is_multiface?: boolean | null,
   readonly is_split?: boolean | null,
   readonly is_token?: boolean | null,
+  readonly is_product?: boolean | null,
   readonly include_tokens?: boolean | null,
   readonly unique?: string | null,
   readonly order?: string | null,

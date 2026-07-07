@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { parseSortDirection } from '@/db/searchOptions';
-import { normalizeCardFormatCode, normalizeCardLegality, normalizeCardRarity } from '@/db/validators';
+import { parseSortDirection } from '../db/searchOptions.ts';
+import { normalizeCardFormatCode, normalizeCardLegality, normalizeCardRarity } from '../db/validators/index.ts';
 import {
   assignIfMissing,
   stripQuotes,
@@ -237,6 +237,11 @@ const applyToken = (params: SearchParams, token: string): boolean => {
       } else {
         assignIfMissing(params, 'is_token', true);
       }
+      return true;
+    }
+
+    if (isValue === 'product') {
+      assignIfMissing(params, 'is_product', !negated);
       return true;
     }
 

@@ -7,7 +7,14 @@ import { Router } from 'itty-router';
 
 import { Execute } from '@/db/helpers';
 import { withPostgres, type Sql } from '@/db/postgres';
-import { getCard, getCardCount, getCardNameAutocomplete, getCards } from '@/db/queries';
+import {
+  getCard,
+  getCardCount,
+  getCardNameAutocomplete,
+  getCards,
+  getProductCount,
+  getProducts
+} from '@/db/queries';
 import {
   asJSON,
   buildListResponse,
@@ -65,6 +72,7 @@ export const args = {
   is_promo:       Optional(BooleanValidator),
   is_multiface:   Optional(BooleanValidator),
   is_split:       Optional(BooleanValidator),
+  is_product:     Optional(BooleanValidator),
   include_tokens: Optional(BooleanValidator),
   include_total:  Optional(BooleanValidator),
   unique:         Optional(CardUniqueModeValidator),
@@ -115,7 +123,7 @@ export default Router({ base: '/cards' })
     },
     withPostgres,
     async (req, { sql, params }) => {
-      const response = await searchCards(sql, params);
+      const response = await searchCards(sql, params, { allowProductSearch: true });
       if (response instanceof Response) {
         // Avoid caching search results for POST requests since request bodies
         // are user-defined and not unique to the request URL.
@@ -232,7 +240,11 @@ export default Router({ base: '/cards' })
     }
   );
 
-const searchCards = async (sql: Sql, params: any) => {
+type CardSearchOptions = {
+  readonly allowProductSearch?: boolean,
+};
+
+const searchCards = async (sql: Sql, params: any, options: CardSearchOptions = {}) => {
   const searchParams = applyCardSearchQuery(params);
   if (params.collection) {
     searchParams.collection = params.collection;
@@ -242,6 +254,14 @@ const searchCards = async (sql: Sql, params: any) => {
     searchParams.legality = 'legal';
   }
   const start = performance.now();
+  if (searchParams.is_product === true) {
+    if (options.allowProductSearch !== true) {
+      return Error(400, '`is:product` is supported on POST /cards/search. Use /products for product catalog search.');
+    }
+
+    return searchProducts(sql, searchParams, start);
+  }
+
   const responseParams = cardSearchResponseParams(searchParams);
   if (searchParams.__empty) {
     return Error(400, 'No results found.', buildListResponse(responseParams, [], 0, start));
@@ -272,6 +292,42 @@ const searchCards = async (sql: Sql, params: any) => {
       : getProbePagination(searchParams, fetchedData.length)
   );
 };
+
+const searchProducts = async (sql: Sql, params: any, start: number) => {
+  const productParams = productSearchParams(params);
+  const responseParams = cardSearchResponseParams(productParams);
+  const [data, countRows] = await Promise.all([
+    getProducts(sql, productParams),
+    getProductCount(sql, productParams),
+  ]);
+  const total = Number(countRows[0].count);
+
+  if (!data.length)
+    return Error(400, 'No results found.', buildListResponse(responseParams, data, total, start));
+
+  return buildListResponse(
+    responseParams,
+    data,
+    total,
+    start,
+    getListPagination(productParams, data.length, total)
+  );
+};
+
+const productSearchParams = (params: any) => ({
+  q: params.q,
+  id: params.id,
+  name: params.name,
+  exact: params.exact,
+  set: params.set,
+  type: params.type,
+  order: params.order,
+  dir: params.dir,
+  limit: params.limit,
+  offset: params.offset,
+  collection: params.collection,
+  is_product: true,
+});
 
 const cardSearchResponseParams = (params: any) => {
   if (!params.collection) {

@@ -268,6 +268,7 @@ The `is:` namespace contains API-supported card flags:
 | Syntax | Meaning |
 |---|---|
 | `is:token` | Return token rows. |
+| `is:product` | On `POST /cards/search`, return product catalog rows instead of card rows. |
 | `is:promo` | Promo label is present. |
 | `is:multiface` | The catalog entry has additional face rows. |
 | `is:multi-face` | Alias for `is:multiface`. |
@@ -275,11 +276,14 @@ The `is:` namespace contains API-supported card flags:
 | `is:split` | Split or subcard relationship is present. |
 | `is:subcard` | Alias for `is:split`. |
 | `-is:token` | Keep token rows excluded. This is also the default. |
+| `-is:product` | Keep product rows excluded. This is also the default for card search. |
 | `-is:promo` | Promo label is not present. |
 | `-is:multiface` | No additional face rows. |
 | `-is:split` | No split or subcard relationship. |
 
 Normal searches hide tokens by default. `is:token` changes the search to token rows. `include_tokens=true` is a query parameter, not a `q` term; it allows tokens to appear alongside normal cards.
+
+`is:product` is a collection-aware bridge for `POST /cards/search` when a submitted MTGO collection mixes card IDs and product IDs. Product results are still classified by the product catalog table populated by CardExporter. Note that for general product queries, the `/products` endpoint is the preferred route for only scanning product catalog rows.
 
 `is:multiface` and `is:split` are MTGO catalog predicates. They find cards with additional face rows or split/subcard relationships; paper layout taxonomy can differ.
 
@@ -333,6 +337,7 @@ Negation is currently supported for type terms and `is:` flags:
 ```text
 /cards?q=t:artifact -t:creature
 /cards?q=-is:token
+POST /cards/search?q=-is:product
 /cards?q=-is:promo
 /cards?q=-is:multiface
 ```

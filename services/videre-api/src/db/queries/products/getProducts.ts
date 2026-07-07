@@ -15,7 +15,8 @@ export interface IProduct {
   object_type: string | null,
   texture_number: number | null,
   is_tradable: boolean | null,
-  image_url: string
+  image_url: string,
+  in_collection?: boolean
 };
 
 export interface IProductCount {

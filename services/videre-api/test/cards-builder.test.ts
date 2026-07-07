@@ -10,6 +10,11 @@ import {
   buildCardsQuery,
   type CardQueryParams
 } from '../src/db/queries/cards/buildCardsQuery.ts';
+import {
+  buildProductCountQuery,
+  buildProductsQuery
+} from '../src/db/queries/products/buildProductsQuery.ts';
+import { applyCardSearchQuery } from '../src/search/cardSearchQuery.ts';
 
 const sql = postgres({
   host: process.env.PGHOST ?? '127.0.0.1',
@@ -282,6 +287,34 @@ test('builder SQL keeps collection IDs parameterized', () => {
   assert.ok(query.values.includes('[605,1195]'));
 });
 
+test('card search parser recognizes product flags', () => {
+  assert.deepEqual(
+    applyCardSearchQuery({ q: 'is:product booster' }),
+    { q: 'booster', is_product: true }
+  );
+  assert.deepEqual(
+    applyCardSearchQuery({ q: '-is:product lightning' }),
+    { q: 'lightning', is_product: false }
+  );
+});
+
+test('product SQL keeps collection IDs parameterized', () => {
+  const query = buildProductsQuery({
+    q: 'booster',
+    limit: 5,
+    collection: {
+      ids: [1, 605, 1195],
+      mode: 'only',
+      match: 'prints',
+    },
+  });
+
+  assert.match(query.text, /jsonb_array_elements_text\(\(\$\d+\)::text::jsonb\)/);
+  assert.match(query.text, / AS in_collection/);
+  assert.doesNotMatch(query.text, /1195/);
+  assert.ok(query.values.includes('[1,605,1195]'));
+});
+
 test('builder count SQL stays parameterized', () => {
   const query = buildCardCountQuery({
     exact: "Dizzying Swoop' OR TRUE --",
@@ -308,6 +341,21 @@ test('builder count SQL keeps collection IDs parameterized', () => {
   assert.match(query.text, /jsonb_array_elements_text\(\(\$\d+\)::text::jsonb\)/);
   assert.doesNotMatch(query.text, /1195/);
   assert.ok(query.values.includes('[605,1195]'));
+});
+
+test('product count SQL keeps collection IDs parameterized', () => {
+  const query = buildProductCountQuery({
+    name: 'booster',
+    collection: {
+      ids: [1, 605, 1195],
+      mode: 'exclude',
+      match: 'prints',
+    },
+  });
+
+  assert.match(query.text, /jsonb_array_elements_text\(\(\$\d+\)::text::jsonb\)/);
+  assert.doesNotMatch(query.text, /1195/);
+  assert.ok(query.values.includes('[1,605,1195]'));
 });
 
 test('card detail SQL keeps nested placeholders and values together', () => {

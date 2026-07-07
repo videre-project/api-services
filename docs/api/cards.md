@@ -194,6 +194,7 @@ Tokens are cards in the MTGO catalog. Default card searches return non-token car
 ```
 
 Sealed products and other non-card MTGO catalog objects are returned by `/products`.
+For collection splitting, `POST /cards/search?q=is:product` returns matching rows from the product catalog instead of the card catalog. This is intended for collection payloads that mix card and product MTGO catalog IDs; general product queries should still use `/products`, though this offers a more convenient single-query path for collection-backed search.
 
 The `unique` option controls print collapsing:
 
@@ -254,7 +255,10 @@ Example collection-backed requests:
 POST /cards/search?q=type:creature&unique=cards
 POST /cards/search?exact=Lightning%20Bolt&unique=prints
 POST /cards/search?q=dragon&order=rank
+POST /cards/search?q=is:product
 ```
+
+When `q=is:product` or `is_product=true` is supplied to `POST /cards/search`, collection matching is exact by MTGO catalog ID. Product rows use the Products API response shape plus `in_collection` when a collection is provided. Product catalog IDs are not oracle-grouped, so `collection.match=oracle` has no additional effect for product results.
 
 ## Response Shape
 
