@@ -56,7 +56,18 @@ test('product lookup returns product CDN URLs', async () => {
 
   assert.ok(ticket);
   assert.equal(ticket.id, 1);
+  assert.equal(
+    ticket.description,
+    'Most events require one or more Event Tickets to enter. You can purchase Event Tickets from the Magic Online Store. Additional products may also be required to enter an event.'
+  );
   assert.equal(ticket.image_url, 'https://r2.videreproject.com/products/1-300px.png');
+});
+
+test('product search includes hydrated descriptions', async () => {
+  const rows = await apiProducts({ q: 'special Phantom tournaments', limit: 10 });
+
+  assert.ok(rows.some((row) => row.id === 45196));
+  assert.ok(rows.every((row) => 'description' in row));
 });
 
 test('product search can filter by MTGO product type', async () => {

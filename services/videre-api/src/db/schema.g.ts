@@ -259,6 +259,7 @@ export const TABLE_COLUMNS = {
     "first_seen_at",
     "last_seen_at",
     "raw",
+    "description",
     "search_vector",
   ],
   "sets": [

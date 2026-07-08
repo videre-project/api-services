@@ -27,7 +27,7 @@ GET /products/:id
 
 Supported query parameters are `id`, `q`, `name`, `exact`, `set`, `type`, `is_tradable`, `order`, `dir`, `limit`, and `offset`.
 
-The `q` parameter accepts plain text and tagged terms. Untagged text searches the product search vector and fuzzy-normalized product name. `!"Event Ticket"` or `exact:"Event Ticket"` maps to the `exact` filter. `set:`, `e:`, and `edition:` map to the `set` filter. `name:` maps to the `name` filter. `type:` and `object_type:` map to the `type` filter. `catalog:`, `cid:`, and `mtgoid:` map to the numeric `id` filter.
+The `q` parameter accepts plain text and tagged terms. Untagged text searches product name, object type, and description, plus fuzzy-normalized product name. `!"Event Ticket"` or `exact:"Event Ticket"` maps to the `exact` filter. `set:`, `e:`, and `edition:` map to the `set` filter. `name:` maps to the `name` filter. `type:` and `object_type:` map to the `type` filter. `catalog:`, `cid:`, and `mtgoid:` map to the numeric `id` filter.
 
 `id` is an exact MTGO catalog ID filter. `name` is a case-insensitive contains filter on the normalized product name. `exact` is an exact normalized product name filter. `set` is an exact uppercase MTGO set-code filter. `type` is an exact uppercase MTGO object type code, such as `BSTR` for boosters or `TCKT` for tickets. `is_tradable` filters rows where MTGO publishes a boolean tradability value.
 
@@ -49,13 +49,14 @@ id
 set_code
 set_name
 name
+description
 object_type
 texture_number
 is_tradable
 image_url
 ```
 
-`id` is the MTGO catalog ID. `set_code` is the imported MTGO set code for the product, and `set_name` is joined from `/sets` when the set exists in the catalog. `object_type` is MTGO's product type code. `texture_number` is the MTGO catalog texture number used by the product image pipeline.
+`id` is the MTGO catalog ID. `set_code` is the imported MTGO set code for the product, and `set_name` is joined from `/sets` when the set exists in the catalog. `description` is the nullable product description; for Vanguard avatars, this is the avatar rules text. `object_type` is MTGO's product type code. `texture_number` is the MTGO catalog texture number used by the product image pipeline.
 
 `is_tradable` can be `true`, `false`, or `null`. `null` means the catalog row lacks a published tradability value.
 
@@ -93,6 +94,7 @@ Example response, from `/products?exact=Event%20Ticket&limit=1`:
       "set_code": "ETK",
       "set_name": "Event Ticket",
       "name": "Event Ticket",
+      "description": "Most events require one or more Event Tickets to enter. You can purchase Event Tickets from the Magic Online Store. Additional products may also be required to enter an event.",
       "object_type": "TCKT",
       "texture_number": 2,
       "is_tradable": null,

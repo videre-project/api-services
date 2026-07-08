@@ -12,7 +12,7 @@ PGPORT = "5432"
 PGDATABASE = "mtgo"
 PGUSER = "api"
 PGSSL = "true"
-CACHE_VERSION = "2"
+CACHE_VERSION = "3"
 
 [secrets]
 required = [ "PGPASSWORD", "CF_CLIENT_ID", "CF_CLIENT_SECRET" ]

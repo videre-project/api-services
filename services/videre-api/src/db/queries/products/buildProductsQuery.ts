@@ -72,6 +72,7 @@ export const buildProductsQuery = (params: ProductQueryParams): CompiledSql => {
       ${products.column('set_code')},
       ${sets.column('name')} AS set_name,
       ${products.column('name')},
+      ${products.column('description')},
       ${products.column('object_type')},
       ${products.column('texture_number')},
       ${products.column('is_tradable')},
