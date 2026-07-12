@@ -8,6 +8,7 @@ import { Router, cors } from 'itty-router';
 import { useCache } from '@/cache';
 import { withParams } from '@/parameters';
 import { Error, asJSON } from '@/responses';
+import { openApiResponse } from '@/openapi';
 
 import archetypes from './archetypes';
 import cards from './cards';
@@ -28,6 +29,7 @@ const { preflight, corsify } = cors();
 export default Router({ before: [preflight], finally: [asJSON, corsify] })
   .get('*', useCache)
   .all('*', withParams)
+  .get('/openapi.json', openApiResponse)
   .all('/archetypes', archetypes.fetch)
   .all('/archetypes/*', archetypes.fetch)
   .all('/cards', cards.fetch)

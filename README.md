@@ -57,6 +57,10 @@ The root `dev` and `deploy` scripts run the matching script across every workspa
 
 ## API Docs
 
+The canonical, machine-readable OpenAPI 3.0 document is served at
+[`https://api.videreproject.com/openapi.json`](https://api.videreproject.com/openapi.json).
+Client SDKs and API model types should be generated from this endpoint.
+
 - [API Overview](docs/api/index.md)
 - [Cards API](docs/api/cards.md)
 - [Sets API](docs/api/sets.md)

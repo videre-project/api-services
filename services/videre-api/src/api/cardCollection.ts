@@ -10,9 +10,8 @@ import type {
   CardCollectionMatchMode,
   CardCollectionMode
 } from '@/db/queries/cards/types';
+import { MAX_INLINE_COLLECTION_IDS } from '@/queryPolicy';
 import { Error } from '@/responses';
-
-export const MAX_INLINE_COLLECTION_IDS = 10_000;
 
 export async function readCardCollection(
   req: IRequest

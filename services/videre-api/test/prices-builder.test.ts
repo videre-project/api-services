@@ -9,6 +9,20 @@ import {
   buildPriceHistoryQuery
 } from '../src/db/queries/prices/buildPricesQuery.ts';
 
+type PriceRouteBody = {
+  object: 'list' | 'error';
+  data: Array<{
+    id: number;
+    price_date: string;
+    source: string;
+    url: string | null;
+    kind: string | null;
+  }>;
+  meta: { missing_ids: number[] };
+  parameters: { ids: { size: number } };
+  message: string;
+};
+
 const sql = postgres({
   host: process.env.PGHOST ?? '127.0.0.1',
   port: Number(process.env.PGPORT ?? 6432),
@@ -241,7 +255,7 @@ function withKnownCatalogId(ids: readonly number[], id: number): number[] {
 
 async function fetchPriceRoute(path: string) {
   const response = await fetch(new URL(path, apiBaseUrl ?? 'http://localhost'));
-  const body = await response.json();
+  const body = await response.json() as PriceRouteBody;
 
   assert.equal(response.status, 200, JSON.stringify(body));
   return body;
@@ -255,7 +269,7 @@ async function postPriceRoute(path: string, payload: unknown) {
     },
     body: JSON.stringify(payload),
   });
-  const body = await response.json();
+  const body = await response.json() as PriceRouteBody;
 
   assert.equal(response.status, 200, JSON.stringify(body));
   return body;
@@ -269,7 +283,7 @@ async function postPriceRouteStatus(path: string, payload: unknown, status: numb
     },
     body: JSON.stringify(payload),
   });
-  const body = await response.json();
+  const body = await response.json() as PriceRouteBody;
 
   assert.equal(response.status, status, JSON.stringify(body));
   return body;

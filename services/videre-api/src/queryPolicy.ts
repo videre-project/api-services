@@ -6,6 +6,7 @@
 import { clampInteger } from '@videre/sql-builder';
 
 export const DEFAULT_LIST_LIMIT = 100;
+export const MAX_INLINE_COLLECTION_IDS = 10_000;
 export const MAX_LIST_LIMIT = 500;
 
 export const DEFAULT_AUTOCOMPLETE_LIMIT = 20;
